@@ -1,0 +1,6 @@
+# Solo se publica el tablero. Lo demás se queda en tu compu.
+pruebas/
+.claude/
+tablero-netlify.zip
+serve.js
+*.bak

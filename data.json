@@ -1,0 +1,18 @@
+{
+  "generado": "2026-11-16T14:56:00",
+  "levantarse": "07:30",
+  "calendario": [],
+  "tareas": [
+    { "id": "t1", "titulo": "Temario de implantología (bloque que me toca enseñar)", "min": 90, "prioridad": 1, "esencial": true, "bloque": "En mis manos" },
+    { "id": "t2", "titulo": "Definir las alertas de mis frenos (protocolo con Claude)", "min": 30, "prioridad": 2, "esencial": false, "bloque": "En mis manos" },
+    { "id": "t3", "titulo": "Capturar el plan de alimentación en la pestaña Plan", "min": 45, "prioridad": 2, "esencial": false, "bloque": "En mis manos" }
+  ],
+  "pendientes": {
+    "Bloqueado (espera a otros)": ["Requisitos y costos de la homologación con REBOE (doctor Párez)"],
+    "En mis manos": ["Temario de implantología", "Alertas de mis frenos", "Plan de alimentación (SMAE)"],
+    "Sin fecha urgente": ["Probar si el tablero escribe directo al Sheet", "Reloj inteligente"]
+  },
+  "objetivos_semana": ["Cerrar el temario de implantología", "Probar el plan de alimentación"],
+  "avisos": [],
+  "totales": { "poemas": 0, "llegadas_9": 0 }
+}
