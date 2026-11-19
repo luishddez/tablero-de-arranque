@@ -859,14 +859,14 @@ function pulsoComida() {
 function pintaAlerta() {
   const el = $('#alerta'); if (!el) return;
   const n = nivelComida(), m = ahoraMin();
-  if (!n) { el.className = 'hide'; el.innerHTML = ''; document.title = 'Tablero de arranque'; alertaNivel = 0; return; }
+  if (!n) { el.className = 'hide'; el.innerHTML = ''; document.title = 'Mi día'; alertaNivel = 0; return; }
   const [t, s] = n === 1 ? ['🍽️ Ya es hora de comer', 'Tu ventana es de 13:00 a 15:00.']
     : n === 2 ? ['🍽️ Come ahora', `Te quedan ${dur(toMin('15:00') - m)} de tu ventana.`]
     : m < toMin('18:00') ? ['🍽️ Ya pasaron las 15:00 y no has comido', 'Come algo ahorita. Es importante.']
     : ['🍽️ Hoy todavía no marcas la comida', 'Si ya comiste, tócalo para quitar este aviso.'];
   el.className = 'n' + n;
   el.innerHTML = `<div class="at">${t}<span class="as">${s}</span></div><button data-a="comi">✓ Ya comí</button>`;
-  document.title = n >= 2 ? '🍽️ ¡Come! · Tablero' : 'Tablero de arranque';
+  document.title = n >= 2 ? '🍽️ ¡Come! · Mi día' : 'Mi día';
   // insistencia: un pulso (vibración y sonido) al subir de nivel y luego cada 10 min (urgente) o cada 5 min (rojo), solo si la app está a la vista
   const cada = n === 3 ? 5 * 60000 : n === 2 ? 10 * 60000 : 0;
   if (!document.hidden && (n > alertaNivel || (cada && Date.now() - ultimoPulso >= cada))) pulsoComida();

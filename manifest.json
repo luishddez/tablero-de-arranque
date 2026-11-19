@@ -1,6 +1,6 @@
 {
-  "name": "Tablero de arranque",
-  "short_name": "Tablero",
+  "name": "Mi día",
+  "short_name": "Mi día",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f6f4ef",
