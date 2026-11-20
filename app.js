@@ -239,6 +239,10 @@ function construirDia(m, fecha, esHoy, extras) {
   let todas = (datos.tareas || []).filter(t => !(est.cerradas[t.id] && est.cerradas[t.id] < fecha))   // lo que ya cerraste en un día anterior no vuelve a salir
     .filter(t => esHoy ? (!t.fecha || t.fecha <= fecha) : t.fecha === fecha).concat(esHoy ? [] : (extras || []))
     .sort((a, b) => (b.esencial - a.esencial) || (a.prioridad - b.prioridad));
+  // si ya existe como evento de Calendar ese día (mismo título), la tarea no se repite
+  const normT = s => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+  const titulosCal = new Set((datos.calendario || []).filter(e => e.inicio && e.fin && (esHoy ? (!e.fecha || e.fecha === fecha) : e.fecha === fecha)).map(e => normT(e.titulo)));   // solo eventos con hora: los de todo el día ya se resuelven arriba
+  todas = todas.filter(t => !titulosCal.has(normT(t.titulo)));
   if (modo === 'ligero') todas = todas.filter(t => t.esencial).slice(0, 1);
   const marca = t => ({ titulo: t.titulo, tipo: 'tarea', id: t.id, esencial: t.esencial, min: t.min, fac: t.facilitador, deHoy: t.deHoy });
   todas.filter(t => E.hechos[t.id]).forEach(t => items.push({ ini: 0, fin: 0, ...marca(t) }));
@@ -247,13 +251,16 @@ function construirDia(m, fecha, esHoy, extras) {
   const PAUSA = 10, sinHora = [];
   const ocup = ocupados.slice();
   // las tareas que Luis fijó a mano se respetan; las demás se acomodan alrededor
-  pend.filter(t => E.mov[t.id] != null).forEach(t => {
-    const ini = E.mov[t.id];
-    items.push({ ini, fin: ini + t.min, ...marca(t) });
+  // y las que traen hora en la hoja (columna "hora", el día que les toca) quedan a esa hora, salvo que Luis las haya movido
+  const horaFija = t => (t.hora && (t.fecha === fecha || (!t.fecha && esHoy))) ? toMin(t.hora) : null;
+  const fijaDe = t => E.mov[t.id] != null ? E.mov[t.id] : horaFija(t);
+  pend.filter(t => fijaDe(t) != null).forEach(t => {
+    const ini = fijaDe(t);
+    items.push({ ini, fin: Math.min(ini + t.min, 1440), ...marca(t), fijo: true });
     ocup.push([ini, ini + t.min]);
   });
   let cursor = Math.max(ventana[0], modo === 'trabajo' ? m : Math.max(levantarse + 90, m));
-  pend.filter(t => E.mov[t.id] == null).forEach(t => {
+  pend.filter(t => fijaDe(t) == null).forEach(t => {
     let ini = cursor, ok = false;
     const topeFin = t.esencial ? Math.max(ventana[1], toMin('21:00')) : ventana[1];   // lo esencial puede pasarse del horario
     while (ini + t.min <= topeFin) {
@@ -800,6 +807,11 @@ function normFecha(s) {
   m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${pad(+m[2])}-${pad(+m[1])}`;
   return '';
 }
+// Hora de una tarea: acepta 9:30, 09:30 o 19:10; si no se entiende, queda sin hora
+function normHora(s) {
+  const m = String(s || '').trim().match(/^(\d{1,2}):(\d{2})/);
+  return m && +m[1] < 24 && +m[2] < 60 ? `${pad(+m[1])}:${m[2]}` : '';
+}
 async function desdeSheet() {
   const g = window.TABLERO.gids;
   const [tar, cal, pen] = await Promise.all([csv(g.tareas), csv(g.calendario), csv(g.pendientes)]);
@@ -809,7 +821,7 @@ async function desdeSheet() {
   return {
     generado: new Date().toISOString(), levantarse: '07:30',
     calendario: cal.filter(e => normFecha(e.fecha) && e.titulo).map(e => ({ fecha: normFecha(e.fecha), inicio: e.inicio || '', fin: e.fin || '', titulo: e.titulo, todoDia: !(e.inicio && e.fin) })),
-    tareas: tar.filter(t => (t.estado || 'pendiente') === 'pendiente').map(t => ({ id: t.id, titulo: t.titulo, min: Number(t.minutos) || 30, prioridad: Number(t.prioridad) || 3, esencial: /^(s[ií]|true|1)$/i.test(t.esencial), bloque: t.bloque, facilitador: t.facilitador || '', fecha: normFecha(t.fecha) })),
+    tareas: tar.filter(t => (t.estado || 'pendiente') === 'pendiente').map(t => ({ id: t.id, titulo: t.titulo, min: Number(t.minutos) || 30, prioridad: Number(t.prioridad) || 3, esencial: /^(s[ií]|true|1)$/i.test(t.esencial), bloque: t.bloque, facilitador: t.facilitador || '', fecha: normFecha(t.fecha), hora: normHora(t.hora) })),
     pendientes, objetivos_semana: objetivos, avisos: [], totales: datos.totales
   };
 }
