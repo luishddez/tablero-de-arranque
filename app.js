@@ -306,6 +306,10 @@ function vistaHoy() {
   h += `<div class="frase${fraseAbierta ? ' open' : ''}" data-a="frase"><q>${esc(f.t)}</q><small>${esc(f.a)}</small></div>`;
   if (dia.todoDia.length) h += `<div class="nota" style="margin:0 0 8px">📅 Hoy, todo el día: ${dia.todoDia.map(esc).join(' · ')}</div>`;
 
+  // notas que ya escribiste y que Claude todavía no acomoda (se ocultan a las 48 h o con "Limpiar")
+  const camino = (est.inbox || []).filter(n => !/^(✅|↩️|Cambios al día)/.test(n.t) && Date.now() - new Date(n.ts).getTime() < 48 * 3600000);
+  if (camino.length) h += `<div class="card" style="margin:0 0 8px"><b>📝 En camino</b>${camino.map(n => `<div class="it2">${n.enviada ? '✓' : '⏳'} ${esc(n.t)} <span class="nota">${n.enviada ? '· enviada, Claude la acomoda en su próxima sesión' : '· sin internet, se enviará sola'}</span></div>`).join('')}<div class="row" style="margin-top:6px"><button data-a="limpiaInbox">Limpiar</button></div></div>`;
+
   // avisos
   (datos.avisos || []).forEach(a => h += `<div class="aviso">${esc(a)}</div>`);
 
