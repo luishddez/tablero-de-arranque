@@ -20,12 +20,12 @@ const FRASES = [
   { t: 'El que lee mucho y anda mucho, ve mucho y sabe mucho.', a: 'Cervantes, Quijote II, 25' }
 ];
 // ---------- íconos y facilitadores (Hábitos Atómicos: hacer fácil lo que quieres, poner fricción a lo que no) ----------
-const EMO = { manana: '☕', salida: '🚶', comida: '🍽️', gym: '💪', cierre: '🌙', cal: '📅', tarea: '🎯', esencial: '⭐', pregunta: '💭', ropa: '🧺', libre: '🌿' };
+const EMO = { manana: '☕', salida: '🚶', comida: '🍽️', 'com-desayuno': '🥤', 'com-previa': '🥤', 'com-cena': '🍳', gym: '💪', cierre: '🌙', cal: '📅', tarea: '🎯', esencial: '⭐', pregunta: '💭', ropa: '🧺', libre: '🌿' };
 const emoDe = i => i.tipo === 'cal' ? EMO.cal : (EMO[i.id] || (i.tipo === 'tarea' ? (i.esencial ? EMO.esencial : EMO.tarea) : '🔹'));
 // Tipo de actividad → color (azul Calendar, dorado esencial, verde tarea, naranja comida, rosa gym, morado rutina, gris lo demás)
 function cat(i) {
   if (i.tipo === 'cal') return 'cal';
-  if (i.id === 'comida') return 'comida';
+  if (i.id === 'comida' || String(i.id).startsWith('com-')) return 'comida';
   if (i.id === 'gym') return 'gym';
   if (i.id === 'manana' || i.id === 'cierre') return 'rut';
   if (i.tipo === 'tarea') return i.esencial ? 'ess' : 'tar';
@@ -48,7 +48,10 @@ function parseFac(txt) {
     return m ? { tipo: 'friccion', t: m[1] } : { tipo: 'facil', t: s.replace(/^facilitador\s*:\s*/i, '') };
   });
 }
-const facDe = i => FAC_BASE[i.id] || (i.tipo === 'tarea' ? parseFac(i.fac) : []);
+const facDe = i => FAC_BASE[i.id] || (i.tipo === 'tarea' ? parseFac(i.fac) : (i.planFac || []));
+// Plan de alimentación (pestaña Plan del Sheet): qué lleva cada comida y su versión mínima para los días de hueva
+const planDe = id => (datos.plan || []).find(p => p.id === id);
+const planFacDe = p => p ? [{ tipo: 'facil', t: p.que_lleva }].concat(p.minimo ? [{ tipo: 'facil', t: 'Con hueva: ' + p.minimo }] : []).filter(f => f.t) : [];
 function saludo() {
   const h = new Date().getHours();
   return h < 12 ? 'Buenos días, Luis' : h < 19 ? 'Buenas tardes, Luis' : 'Buenas noches, Luis';
@@ -135,7 +138,7 @@ function fraseDelDia() {
 }
 
 // ---------- estado ----------
-let datos = { levantarse: '07:30', calendario: [], tareas: [], pendientes: {}, objetivos_semana: [], avisos: [], totales: { poemas: 0, llegadas_9: 0 } };
+let datos = { levantarse: '08:30', calendario: [], tareas: [], pendientes: {}, objetivos_semana: [], avisos: [], totales: { poemas: 0, llegadas_9: 0 } };
 let est = safe.get('tablero-estado', null);
 if (!est || est.fecha !== hoyKey()) {
   const prev = est || {};
@@ -158,7 +161,9 @@ const MODOS = { trabajo: 'Trabajo', finde: 'Fin de semana', viaje: 'Viaje', lige
 function pasosManana() {
   const p = [{ t: 'Toma un vaso de agua', s: 'Que ya esté listo desde anoche.', e: '💧', fac: [{ tipo: 'facil', t: 'El vaso ya te espera desde la noche anterior' }] },
     { t: 'Lee un poema', s: 'Uno solo, el de hoy.', e: '📖', poema: true, fac: [{ tipo: 'facil', t: 'El libro está junto a la cafetera' }] }];
-  if (est.desayuno) p.push({ t: 'Desayuna', s: 'Lo que decidiste anoche.', e: '🥣', fac: [] });
+  const lic = planDe('desayuno');
+  if (lic) p.push({ t: 'Prepara tu licuado', s: lic.que_lleva || 'Tu desayuno sin pensar.', e: '🥤', fac: [{ tipo: 'facil', t: 'Ingredientes listos desde el domingo' }, { tipo: 'facil', t: 'Antes del café' }] });
+  else if (est.desayuno) p.push({ t: 'Desayuna', s: 'Lo que decidiste anoche.', e: '🥣', fac: [] });
   return p;
 }
 const PASOS_CIERRE = [
@@ -186,7 +191,7 @@ function construirDia(m, fecha, esHoy, extras) {
   const modo = esHoy ? modoActual() : ([0, 6].includes(diaSemana(fecha)) ? 'finde' : 'trabajo');
   const dow = diaSemana(fecha);
   const items = [], ocupados = [];
-  const levantarse = toMin(datos.levantarse || '07:30');
+  const levantarse = toMin(datos.levantarse || '08:30');
   const ceil5 = x => Math.ceil(x / 5) * 5;
 
   const todoDia = [];   // eventos de Calendar sin hora (todo el día)
@@ -208,7 +213,7 @@ function construirDia(m, fecha, esHoy, extras) {
     items.push({ ini: toMin('09:00'), fin: toMin('09:00'), titulo: 'Entrada a MegaGen', tipo: 'ctx', id: 'entrada' });
     let ci = toMin('14:00');
     if (!E.hechos.comida && m > ci && m <= toMin('18:00')) ci = m;   // comida flexible: se mueve sola hasta las 18:00 (después deja de estorbar), sin culpa
-    items.push({ ini: ci, fin: ci + 60, titulo: 'Comida (flexible 13:00–15:00)', tipo: 'base', id: 'comida' });
+    items.push({ ini: ci, fin: ci + 60, titulo: 'Comida (flexible 13:00–15:00)', tipo: 'base', id: 'comida', planFac: planFacDe(planDe('comida')) });
     ocupados.push([ci, ci + 60]);
     items.push({ ini: toMin('18:00'), fin: toMin('18:00'), titulo: 'Salida del trabajo', tipo: 'ctx', id: 'salidaTrab' });
     if ([1, 2, 3].includes(dow)) items.push({ ini: toMin('18:30'), fin: toMin('20:00'), titulo: 'Gym (Temple) · ventana 18:00–21:00', tipo: 'base', id: 'gym' });
@@ -219,9 +224,19 @@ function construirDia(m, fecha, esHoy, extras) {
     items.push({ ini: q, fin: q + 20, titulo: '¿Qué quieres que tenga este día?', tipo: 'base', id: 'pregunta' });
     if (dow === 6) items.push({ ini: toMin('11:00'), fin: toMin('12:00'), titulo: 'Lavar ropa', tipo: 'base', id: 'ropa' });
     ocupados.push([toMin('14:00'), toMin('15:00')]);
-    items.push({ ini: toMin('14:00'), fin: toMin('15:00'), titulo: 'Comida', tipo: 'base', id: 'comida' });
+    items.push({ ini: toMin('14:00'), fin: toMin('15:00'), titulo: 'Comida', tipo: 'base', id: 'comida', planFac: planFacDe(planDe('comida')) });
   } else if (modo === 'viaje') {
     items.push({ ini: toMin('18:30'), fin: toMin('20:00'), titulo: 'Gym del hotel', tipo: 'base', id: 'gym' });
+  }
+  // Plan de alimentación: el licuado del desayuno ya es un paso de la mañana mínima (entre semana); la previa al gym (solo días de gym) y la cena son actividades del día
+  if (modo === 'trabajo' || modo === 'finde') {
+    (datos.plan || []).forEach(p => {
+      if (p.id === 'comida' || !p.hora) return;
+      if (p.id === 'desayuno' && modo === 'trabajo') return;
+      if (p.dias === 'gym' && !items.some(i => i.id === 'gym')) return;
+      const ini = p.id === 'desayuno' ? Math.max(levantarse + 30, toMin(p.hora)) : toMin(p.hora);
+      items.push({ ini, fin: ini + (p.minutos || 15), titulo: p.comida, tipo: 'base', id: 'com-' + p.id, planFac: planFacDe(p) });
+    });
   }
   if (modo !== 'ligero') items.push({ ini: toMin('23:00'), fin: toMin('23:15'), titulo: 'Cierre del día', tipo: 'base', id: 'cierre' });
 
@@ -232,7 +247,7 @@ function construirDia(m, fecha, esHoy, extras) {
     if (it.fin > it.ini && E.mov[it.id] != null) { const d = it.fin - it.ini; it.ini = E.mov[it.id]; it.fin = it.ini + d; }
   }
   ocupados.length = 0;
-  items.filter(i => i.tipo === 'cal' || i.id === 'comida' || i.fijo).forEach(i => ocupados.push([i.ini, i.fin]));
+  items.filter(i => i.tipo === 'cal' || i.id === 'comida' || String(i.id).startsWith('com-') || i.fijo).forEach(i => ocupados.push([i.ini, i.fin]));
 
   // Tareas: solo las pendientes se acomodan, empezando desde ahora (los bloques se mueven sin que todo se caiga)
   // Hoy: las tareas sin fecha (o con fecha de hoy o vencida). Otro día: solo las que tienen esa fecha, más las arrastradas de hoy.
@@ -289,7 +304,7 @@ function vistaHoy() {
 
   // ¿qué toca ahora?
   const activos = real.filter(i => !hecho(i) && i.ini <= m && m < i.fin && i.fin > i.ini);
-  const prio = i => i.tipo === 'cal' ? 0 : (i.id === 'manana' || i.id === 'cierre') ? 1 : i.id === 'comida' ? 2 : i.tipo === 'tarea' ? 3 : 4;
+  const prio = i => i.tipo === 'cal' ? 0 : (i.id === 'manana' || i.id === 'cierre') ? 1 : (i.id === 'comida' || String(i.id).startsWith('com-')) ? 2 : i.tipo === 'tarea' ? 3 : 4;
   activos.sort((a, b) => prio(a) - prio(b));
   const ahora = activos[0] || null;
   const futuros = real.filter(i => !hecho(i) && i.ini > m && i !== ahora);
@@ -312,6 +327,8 @@ function vistaHoy() {
 
   // avisos
   (datos.avisos || []).forEach(a => h += `<div class="aviso">${esc(a)}</div>`);
+  // los domingos: la lista del súper de la semana, a la vista
+  if (new Date().getDay() === 0 && (datos.compras || []).length) h += `<div class="card" style="margin:0 0 8px"><b>🛒 Súper de hoy</b>${listaCompras()}</div>`;
 
   // HERO: ahora
   const forzado = est.forzar;
@@ -432,17 +449,20 @@ function vistaSemana() {
   return h;
 }
 
+const listaCompras = () => (datos.compras || []).map(c => `<div class="it2">${esc(c.articulo)} · <b>${esc(c.cantidad)}</b>${c.regla ? ` <span class="nota">· ${esc(c.regla)}</span>` : ''}</div>`).join('');
 function vistaMenu() {
   const hs = horasSueno();
   let h = `<div class="top"><h1>Menú</h1><button data-a="cerrarMenu">Cerrar</button></div>`;
   h += `<div class="card"><div class="row"><button class="pri" data-a="actualizar">Actualizar</button><button data-a="tema">Fondo: ${tema === 'claro' ? 'claro' : 'oscuro'} (cambiar)</button><button data-a="sonido">Alerta de comida: ${sonidoComida ? 'con sonido' : 'sin sonido'}</button></div><div class="nota" style="margin-top:8px">${esc(estadoSync) || 'Se actualiza solo al abrir y al volver el internet.'}</div></div>`;
   h += `<h3>Notas por acomodar (${est.inbox.length})</h3><div class="card">${est.inbox.map(n => `<div class="it2">${n.enviada ? '✓' : '⏳'} ${esc(n.t)} <span class="nota">${n.enviada ? '· enviada' : '· en cola'}</span></div>`).join('') || '<div class="nota">Nada pendiente.</div>'}${est.inbox.length ? '<div class="row" style="margin-top:8px"><button data-a="reenviar">Enviar ahora</button><button data-a="limpiaInbox">Limpiar lista</button></div><div class="nota" style="margin-top:6px">Las notas se mandan solas. Claude las organiza cuando abres una conversación con él.</div>' : ''}</div>`;
+  if ((datos.plan || []).length) h += `<h3>Plan de alimentación</h3><div class="card">${datos.plan.map(p => `<div class="it2"><b>${esc(fmt(toMin(p.hora || '00:00')))} · ${esc(p.comida)}</b> <span class="nota">· ${esc(p.kcal)} kcal · ${esc(p.proteina)} g de proteína${p.dias === 'gym' ? ' · días de gym' : ''}</span><div class="nota">${esc(p.que_lleva)}</div></div>`).join('')}</div>`;
+  if ((datos.compras || []).length) h += `<h3>Compras de la semana</h3><div class="card">${listaCompras()}</div>`;
   h += `<h3>Pendientes</h3>`;
   if ((datos.objetivos_semana || []).length) h += `<div class="card"><b>Objetivos de la semana</b>${datos.objetivos_semana.map(o => `<div class="it2">${esc(o)}</div>`).join('')}</div>`;
   Object.entries(datos.pendientes || {}).forEach(([k, v]) => { h += `<div class="card"><b>${esc(k)}</b>${v.map(x => `<div class="it2">${esc(x)}</div>`).join('') || '<div class="nota">Vacío</div>'}</div>`; });
   h += `<h3>Modo del día</h3><div class="card row">${Object.entries(MODOS).map(([k, v]) => `<button class="${modoActual() === k ? 'pri' : ''}" data-a="modo" data-v="${k}">${v}</button>`).join('')}</div>`;
   h += `<h3>Mañana y cierre</h3><div class="card row"><button data-a="abrirFlujo" data-v="manana">Abrir mañana mínima</button><button data-a="abrirFlujo" data-v="cierre">Abrir cierre</button></div><div class="card"><label><input type="checkbox" data-a="desayuno" ${est.desayuno ? 'checked' : ''}> Sumar el desayuno a la mañana mínima</label></div>`;
-  h += `<h3>Sueño</h3><div class="card"><div class="nota" style="margin-bottom:6px">Si te duermes a las:</div><input type="time" data-a="sueno" value="${est.sueno}"><p style="margin:10px 0 0"><b>${hs}</b> <span class="nota">hasta las ${datos.levantarse || '07:30'}. Tú decides.</span></p></div>`;
+  h += `<h3>Sueño</h3><div class="card"><div class="nota" style="margin-bottom:6px">Si te duermes a las:</div><input type="time" data-a="sueno" value="${est.sueno}"><p style="margin:10px 0 0"><b>${hs}</b> <span class="nota">hasta las ${datos.levantarse || '08:30'}. Tú decides.</span></p></div>`;
   h += `<h3>Totales (nunca rachas)</h3><div class="card"><div>Poemas leídos: <b>${est.totales.poemas}</b></div><div>Veces que llegué a las 9: <b>${est.totales.llegadas_9}</b></div><div class="row" style="margin-top:8px"><button data-a="llegue">Hoy llegué a las 9:00</button></div></div>`;
   h += `<h3>Facilitadores</h3><div class="card nota"><div class="it2">Libro junto a la cafetera</div><div class="it2">Vaso de agua listo desde la noche anterior</div><div class="it2">Celular cargando lejos de la cama</div></div>`;
   return h;
@@ -450,7 +470,7 @@ function vistaMenu() {
 function horasSueno() {
   const [h, m] = est.sueno.split(':').map(Number);
   let dormir = h * 60 + m; if (dormir < 12 * 60) dormir += 24 * 60;
-  return dur(Math.max(0, toMin(datos.levantarse || '07:30') + 24 * 60 - dormir));
+  return dur(Math.max(0, toMin(datos.levantarse || '08:30') + 24 * 60 - dormir));
 }
 
 // ---------- planear el día (cualquier día): tocar un bloque y tocar a dónde moverlo, o arrastrarlo ----------
@@ -818,7 +838,8 @@ function normHora(s) {
 }
 async function desdeSheet() {
   const g = window.TABLERO.gids;
-  const [tar, cal] = await Promise.all([csv(g.tareas), csv(g.calendario)]);
+  const opc = gid => gid == null ? Promise.resolve([]) : csv(gid).catch(() => []);   // Plan y Compras son opcionales: si fallan, la app sigue igual
+  const [tar, cal, plan, compras] = await Promise.all([csv(g.tareas), csv(g.calendario), opc(g.plan), opc(g.compras)]);
   const hoy = hoyKey();
   // Una sola lista: la pestaña Tareas. Estados: pendiente (entra al día), bloqueada y luego (solo se ven en el Menú, agrupadas por "bloque"), objetivo (objetivos de la semana), hecho/prueba (no se ven)
   const pendientes = {}, objetivos = [];
@@ -828,9 +849,11 @@ async function desdeSheet() {
     else if (['pendiente', 'bloqueada', 'luego'].includes(e) && t.titulo) (pendientes[t.bloque || 'Sin grupo'] = pendientes[t.bloque || 'Sin grupo'] || []).push(t.titulo);
   });
   return {
-    generado: new Date().toISOString(), levantarse: '07:30',
+    generado: new Date().toISOString(), levantarse: '08:30',
     calendario: cal.filter(e => normFecha(e.fecha) && e.titulo).map(e => ({ fecha: normFecha(e.fecha), inicio: e.inicio || '', fin: e.fin || '', titulo: e.titulo, todoDia: !(e.inicio && e.fin) })),
     tareas: tar.filter(t => (t.estado || 'pendiente') === 'pendiente').map(t => ({ id: t.id, titulo: t.titulo, min: Number(t.minutos) || 30, prioridad: Number(t.prioridad) || 3, esencial: /^(s[ií]|true|1)$/i.test(t.esencial), bloque: t.bloque, facilitador: t.facilitador || '', fecha: normFecha(t.fecha), hora: normHora(t.hora) })),
+    plan: plan.filter(p => p.id && p.comida).map(p => ({ id: p.id, comida: p.comida, hora: normHora(p.hora), dias: (p.dias || 'todos').toLowerCase(), que_lleva: p.que_lleva || '', minimo: p.minimo || '', kcal: p.kcal || '', proteina: p.proteina_g || '', minutos: Number(p.minutos) || 15 })),
+    compras: compras.filter(c => c.articulo).map(c => ({ articulo: c.articulo, cantidad: c.cantidad_semana || '', para: c.para || '', regla: c.regla || '' })),
     pendientes, objetivos_semana: objetivos, avisos: [], totales: datos.totales
   };
 }
@@ -877,9 +900,25 @@ function pulsoComida() {
   try { if (navigator.vibrate) navigator.vibrate([250, 120, 250, 120, 250]); } catch (e) { }
   if (sonidoComida) pitido();
 }
+// Comidas del plan (licuado de la previa, cena, etc.): aviso suave a su hora, sin insistir como la comida principal
+function comidaPlanPendiente() {
+  if (!(datos.plan || []).length || !['trabajo', 'finde'].includes(modoActual())) return null;
+  const m = ahoraMin();
+  const a = construirDia(m).items.find(i => String(i.id).startsWith('com-') && !est.hechos[i.id] && m >= i.ini && m < i.ini + 120);
+  return a ? { it: a, nivel: m < a.ini + 60 ? 1 : 2 } : null;
+}
 function pintaAlerta() {
   const el = $('#alerta'); if (!el) return;
   const n = nivelComida(), m = ahoraMin();
+  const pl = n ? null : comidaPlanPendiente();
+  if (pl) {
+    el.className = 'n' + pl.nivel;
+    const ayuda = (pl.it.planFac && pl.it.planFac[0]) ? pl.it.planFac[0].t : '';
+    el.innerHTML = `<div class="at">${pl.nivel === 1 ? '🍽️ Ya es hora' : '🍽️ Sigue pendiente'}: ${esc(pl.it.titulo)}<span class="as">${esc(ayuda)}</span></div><button data-a="ok" data-v="${esc(pl.it.id)}">✓ Ya comí</button>`;
+    document.title = '🍽️ ' + pl.it.titulo + ' · Mi día';
+    if (!document.hidden && pl.nivel > alertaNivel) pulsoComida();
+    alertaNivel = pl.nivel; return;
+  }
   if (!n) { el.className = 'hide'; el.innerHTML = ''; document.title = 'Mi día'; alertaNivel = 0; return; }
   const [t, s] = n === 1 ? ['🍽️ Ya es hora de comer', 'Tu ventana es de 13:00 a 15:00.']
     : n === 2 ? ['🍽️ Come ahora', `Te quedan ${dur(toMin('15:00') - m)} de tu ventana.`]
