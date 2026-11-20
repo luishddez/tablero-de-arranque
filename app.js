@@ -842,16 +842,23 @@ async function desdeSheet() {
   const [tar, cal, plan, compras] = await Promise.all([csv(g.tareas), csv(g.calendario), opc(g.plan), opc(g.compras)]);
   return armar(tar, cal, plan, compras);
 }
-// Tareas, plan y compras de tu cuenta en Supabase. El calendario sigue saliendo del Sheet publicado hasta que también se mueva a la cuenta.
+// Tareas, plan, compras y calendario de tu cuenta en Supabase. El calendario lo manda tu Apps Script cada pocos minutos y deja un "latido".
+// Si el calendario de la cuenta está vacío o lleva más de 3 horas sin latido, se intenta el Sheet publicado; si tampoco hay, se usa lo último guardado.
 async function desdeSupabase() {
   const g = window.TABLERO.gids;
-  const [tarD, planD, comD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras')]);
+  const [tarD, planD, comD, diaD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras'), SB.coleccion('dia').catch(() => [])]);
   const ord = (a, b) => (a.orden || 0) - (b.orden || 0);
   const tar = tarD.sort(ord).map(t => ({ ...t, minutos: String(t.minutos ?? ''), prioridad: String(t.prioridad ?? ''), esencial: t.esencial ? 'sí' : 'no' }));
   const plan = planD.sort(ord).map(p => ({ ...p, kcal: String(p.kcal ?? ''), proteina_g: String(p.proteina_g ?? ''), minutos: String(p.minutos ?? '') }));
   const compras = comD.sort(ord);
+  let calC = [];
+  try { calC = await SB.coleccion('dia/calendario'); } catch (e) { if (e && e.code === 'nosesion') throw e; }
+  const latido = (diaD.find(x => x && x.id === 'calendario_estado') || {}).ultima;
+  const fresco = !!latido && (Date.now() - Date.parse(latido)) < 3 * 3600 * 1000;
   let cal = null;
-  try { cal = await csv(g.calendario); } catch (e) { }
+  if (calC.length && fresco) cal = calC;
+  else { try { cal = await csv(g.calendario); } catch (e) { cal = calC.length ? calC : null; } }
+  if (cal && cal === calC) { const k = e => normFecha(e.fecha) + ' ' + (e.inicio || ''); cal = calC.slice().sort((a, b) => k(a).localeCompare(k(b))); }
   return armar(tar, cal || [], plan, compras, cal ? null : (datos.calendario || []));
 }
 // Arma los datos del día a partir de filas con las mismas columnas del Sheet (vengan del CSV o de Supabase)
