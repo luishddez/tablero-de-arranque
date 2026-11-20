@@ -814,10 +814,15 @@ function normHora(s) {
 }
 async function desdeSheet() {
   const g = window.TABLERO.gids;
-  const [tar, cal, pen] = await Promise.all([csv(g.tareas), csv(g.calendario), csv(g.pendientes)]);
+  const [tar, cal] = await Promise.all([csv(g.tareas), csv(g.calendario)]);
   const hoy = hoyKey();
+  // Una sola lista: la pestaña Tareas. Estados: pendiente (entra al día), bloqueada y luego (solo se ven en el Menú, agrupadas por "bloque"), objetivo (objetivos de la semana), hecho/prueba (no se ven)
   const pendientes = {}, objetivos = [];
-  pen.forEach(p => { if (p.columna === 'Objetivo') objetivos.push(p.texto); else (pendientes[p.columna] = pendientes[p.columna] || []).push(p.texto); });
+  tar.forEach(t => {
+    const e = (t.estado || 'pendiente').toLowerCase();
+    if (e === 'objetivo') objetivos.push(t.titulo);
+    else if (['pendiente', 'bloqueada', 'luego'].includes(e) && t.titulo) (pendientes[t.bloque || 'Sin grupo'] = pendientes[t.bloque || 'Sin grupo'] || []).push(t.titulo);
+  });
   return {
     generado: new Date().toISOString(), levantarse: '07:30',
     calendario: cal.filter(e => normFecha(e.fecha) && e.titulo).map(e => ({ fecha: normFecha(e.fecha), inicio: e.inicio || '', fin: e.fin || '', titulo: e.titulo, todoDia: !(e.inicio && e.fin) })),
