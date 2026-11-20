@@ -840,6 +840,22 @@ async function desdeSheet() {
   const g = window.TABLERO.gids;
   const opc = gid => gid == null ? Promise.resolve([]) : csv(gid).catch(() => []);   // Plan y Compras son opcionales: si fallan, la app sigue igual
   const [tar, cal, plan, compras] = await Promise.all([csv(g.tareas), csv(g.calendario), opc(g.plan), opc(g.compras)]);
+  return armar(tar, cal, plan, compras);
+}
+// Tareas, plan y compras de tu cuenta en Supabase. El calendario sigue saliendo del Sheet publicado hasta que también se mueva a la cuenta.
+async function desdeSupabase() {
+  const g = window.TABLERO.gids;
+  const [tarD, planD, comD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras')]);
+  const ord = (a, b) => (a.orden || 0) - (b.orden || 0);
+  const tar = tarD.sort(ord).map(t => ({ ...t, minutos: String(t.minutos ?? ''), prioridad: String(t.prioridad ?? ''), esencial: t.esencial ? 'sí' : 'no' }));
+  const plan = planD.sort(ord).map(p => ({ ...p, kcal: String(p.kcal ?? ''), proteina_g: String(p.proteina_g ?? ''), minutos: String(p.minutos ?? '') }));
+  const compras = comD.sort(ord);
+  let cal = null;
+  try { cal = await csv(g.calendario); } catch (e) { }
+  return armar(tar, cal || [], plan, compras, cal ? null : (datos.calendario || []));
+}
+// Arma los datos del día a partir de filas con las mismas columnas del Sheet (vengan del CSV o de Supabase)
+function armar(tar, cal, plan, compras, calListo) {
   const hoy = hoyKey();
   // Una sola lista: la pestaña Tareas. Estados: pendiente (entra al día), bloqueada y luego (solo se ven en el Menú, agrupadas por "bloque"), objetivo (objetivos de la semana), hecho/prueba (no se ven)
   const pendientes = {}, objetivos = [];
@@ -850,7 +866,7 @@ async function desdeSheet() {
   });
   return {
     generado: new Date().toISOString(), levantarse: '08:30',
-    calendario: cal.filter(e => normFecha(e.fecha) && e.titulo).map(e => ({ fecha: normFecha(e.fecha), inicio: e.inicio || '', fin: e.fin || '', titulo: e.titulo, todoDia: !(e.inicio && e.fin) })),
+    calendario: calListo || cal.filter(e => normFecha(e.fecha) && e.titulo).map(e => ({ fecha: normFecha(e.fecha), inicio: e.inicio || '', fin: e.fin || '', titulo: e.titulo, todoDia: !(e.inicio && e.fin) })),
     tareas: tar.filter(t => (t.estado || 'pendiente') === 'pendiente').map(t => ({ id: t.id, titulo: t.titulo, min: Number(t.minutos) || 30, prioridad: Number(t.prioridad) || 3, esencial: /^(s[ií]|true|1)$/i.test(t.esencial), bloque: t.bloque, facilitador: t.facilitador || '', fecha: normFecha(t.fecha), hora: normHora(t.hora) })),
     plan: plan.filter(p => p.id && p.comida).map(p => ({ id: p.id, comida: p.comida, hora: normHora(p.hora), dias: (p.dias || 'todos').toLowerCase(), que_lleva: p.que_lleva || '', minimo: p.minimo || '', kcal: p.kcal || '', proteina: p.proteina_g || '', minutos: Number(p.minutos) || 15 })),
     compras: compras.filter(c => c.articulo).map(c => ({ articulo: c.articulo, cantidad: c.cantidad_semana || '', para: c.para || '', regla: c.regla || '' })),
@@ -860,7 +876,11 @@ async function desdeSheet() {
 async function actualizar(manual) {
   estadoSync = 'Actualizando…'; if (menuAbierto) render();
   try {
-    if (window.TABLERO && window.TABLERO.pub) {
+    if (window.SB && SB.activo()) {
+      if (!SB.conSesion()) { SB.pedirLogin(); const e = new Error('sin sesión'); e.code = 'nosesion'; throw e; }
+      datos = await desdeSupabase(); safe.set('tablero-datos', datos);
+      estadoSync = 'Actualizado de tu cuenta a las ' + new Date().toTimeString().slice(0, 5) + '.';
+    } else if (window.TABLERO && window.TABLERO.pub) {
       datos = await desdeSheet(); safe.set('tablero-datos', datos);
       estadoSync = 'Actualizado del Sheet a las ' + new Date().toTimeString().slice(0, 5) + '.';
     } else {
@@ -870,7 +890,8 @@ async function actualizar(manual) {
     }
   } catch (e) {
     datos = safe.get('tablero-datos', datos);
-    estadoSync = 'Sin internet: usando lo último guardado.';
+    if (e && e.code === 'nosesion') { estadoSync = 'Entra a tu cuenta para ver tus datos al día. Mientras tanto, lo último guardado.'; if (window.SB && SB.activo()) SB.pedirLogin(); }
+    else estadoSync = 'Sin internet: usando lo último guardado.';
   }
   render();
 }
