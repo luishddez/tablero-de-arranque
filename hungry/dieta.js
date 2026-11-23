@@ -27,14 +27,14 @@
   HG.vistas.dieta = function () {
     const s = sec(); if (s && HG.dsecs[s]) return HG.dsecs[s]();
     const p = getP(), m = metas(p), g = gustos(), nsi = Object.values(g).filter(v => v === 'si').length, nno = Object.values(g).filter(v => v === 'no').length;
+    const ea = HG.entAvance ? HG.entAvance() : { h: 0, t: 1, req: 1 };
     const sup = HDB.hijos('comida/suplementos').filter(x => x && x.toma).length, prop = HDB.hijos('comida/plan_propuesto').length, tarj = (t, d, ok, sx) => `<div class="card paso ${ok ? 'ok' : ''}" data-a="dsec" data-s="${sx}"><span class="pn">${ok ? '✓' : t.charAt(0)}</span><div class="sp"><b>${t.slice(4)}</b><div class="nota">${d}</div></div><span class="mut" style="font-size:20px">›</span></div>`;
-    let h = `<div class="row"><h1 class="sp">Arma tu dieta</h1>${HG.pill()}</div><div class="nota">Cinco pasos. Puedes volver a cualquiera cuando quieras.</div><div class="bar" style="margin:10px 0 4px"><i style="width:${[!!m, !!p.completo_salud, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length * 20}%"></i></div><div class="mut" style="margin-bottom:6px">${[!!m, !!p.completo_salud, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length} de 5 pasos listos</div>`;
+    let h = `<div class="row"><h1 class="sp">Arma tu dieta</h1>${HG.pill()}</div><div class="nota">Cuatro pasos. Puedes volver a cualquiera cuando quieras.</div><div class="bar" style="margin:10px 0 4px"><i style="width:${[ea.req === 0 && ea.h >= 8, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length * 25}%"></i></div><div class="mut" style="margin-bottom:6px">${[ea.req === 0 && ea.h >= 8, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length} de 4 pasos listos</div>`;
     if (m) h += `<div class="card" style="background:var(--ac2)"><b>Tu meta: ${m.kcal} kcal al día</b><div class="macros"><span>Proteína <b>${m.prot}</b> g</span><span>Carbs <b>${m.carb}</b> g</span><span>Grasa <b>${m.grasa}</b> g</span></div></div>`;
-    h += tarj('1 · Datos y objetivo', 'Cuerpo, actividad y qué quieres lograr', !!m, 'datos');
-    h += tarj('2 · Salud y hábitos', 'Alergias, medicamentos, horarios y cómo comes', !!p.completo_salud, 'salud');
-    h += tarj('3 · Mis gustos', nsi + nno ? `${nsi} sí · ${nno} no` : 'Desliza: izquierda no, derecha sí', nsi + nno > 20, 'gustos');
-    h += tarj('4 · Suplementos', sup ? sup + ' que tomas' : 'Qué tomas hoy', sup > 0, 'suples');
-    h += tarj('5 · Mi régimen', prop ? 'Hay un régimen armado para revisar' : 'Se arma con lo anterior', !!prop, 'regimen');
+    h += tarj('1 · Entrevista', `${ea.h} de ${ea.t} respondidas${ea.req ? ' · faltan ' + ea.req + ' importantes' : ''}`, ea.req === 0 && ea.h >= 8, 'entrevista');
+    h += tarj('2 · Mis gustos', nsi + nno ? `${nsi} sí · ${nno} no` : 'Desliza: izquierda no, derecha sí', nsi + nno > 20, 'gustos');
+    h += tarj('3 · Suplementos', sup ? sup + ' que tomas' : 'Qué tomas hoy', sup > 0, 'suples');
+    h += tarj('4 · Mi régimen', prop ? 'Hay una propuesta para revisar' : 'Claude lo arma con tu entrevista', !!prop, 'regimen');
     h += `<div class="card" style="margin-top:14px"><div class="row"><b class="sp">Avisos con la app cerrada</b></div><div class="nota">Te aviso si se te pasa una comida o se acaba algo. En iPhone: Compartir → «Agregar a inicio» y abre Hungry desde ahí.</div><div style="margin-top:6px"><button data-a="push">${(() => { try { return localStorage.getItem('hungry.push') ? 'Avisos activados (tocar para reactivar)' : 'Activar avisos'; } catch (e) { return 'Activar avisos'; } })()}</button></div></div>`;
     h += `<div class="card"><div class="row"><b class="sp">Cuenta</b><span class="mut">${esc(HDB.email())}</span></div><div class="row" style="margin-top:6px"><a class="btn" href="../index.html">← Mi día</a><button class="ghost" data-a="salir">Salir</button></div></div>`;
     return h;
@@ -170,6 +170,5 @@
     HDB.hijos('comida/regimen').forEach(x => x && x.id && HDB.del('comida/regimen/' + x.id));
     HDB.hijos('comida/regimen_respaldo').forEach(x => x && x.id && HDB.set('comida/regimen/' + x.id, x)); toast('Plan anterior restaurado'); HG.render();
   };
-  HG.iniciar();
   setTimeout(refrescaRes, 0);
 })();

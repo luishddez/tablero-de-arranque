@@ -156,7 +156,7 @@
     }
     return h;
   };
-  HG.acc.empezar = () => { HG.tab = 'dieta'; HG.sub.dsec = 'datos'; HG.render(); window.scrollTo(0, 0); };
+  HG.acc.empezar = () => { HG.tab = 'dieta'; HG.sub.dsec = 'entrevista'; HG.render(); window.scrollTo(0, 0); };
   HG.acc.alregimen = () => {
     const ya = new Set(alacena().map(x => x.id)); let n = 0;
     plan().forEach(p => (p.opciones || []).forEach(o => (o.i || []).forEach(([id]) => { const a = AM[id]; if (!a || ya.has(id)) return; ya.add(id); n++; HDB.set('comida/alacena/' + id, { id, alimento_id: id, nombre: a.n.replace(/ (.*)/, ''), emoji: a.e, modo: 'aprox', nivel: 'no', cantidad: 0, unidad: a.u, minimo: 0, categoria: '', pasillo: a.p, donde: '', ts: Date.now() }); })));
