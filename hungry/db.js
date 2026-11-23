@@ -71,7 +71,7 @@
     if (!(lee(SK, null) || ses)) { estado = 'sinsesion'; aviso(); return false; }
     await vaciar();
     try {
-      const res = await rest('docs?path=like.' + encodeURIComponent('comida/*') + '&select=path,data&limit=2000', {});
+      const res = await rest('docs?path=like.' + encodeURIComponent('comida/*') + '&select=path,data&order=updated_at.desc&limit=3000', {});
       const filas = await res.json();
       const nuevo = {};
       filas.forEach(f => { nuevo[f.path] = f.data; });

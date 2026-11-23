@@ -53,6 +53,14 @@
     if (res.status === 401) { if (ses) ses.exp = 0; res = await pedir(); }
     if (!res.ok) throw err(res.status === 401 ? 'nosesion' : 'http', 'HTTP ' + res.status);
   }
+  async function borrar(path) {
+    let u = null; try { u = JSON.parse(atob(ses.at.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub; } catch (e) { }
+    if (!u) throw err('nosesion');
+    const pedir = async () => fetch(C.url + '/rest/v1/docs?user_id=eq.' + u + '&path=eq.' + encodeURIComponent(path), { method: 'DELETE', headers: { apikey: C.key, Authorization: 'Bearer ' + await token() } });
+    let res = await pedir();
+    if (res.status === 401) { if (ses) ses.exp = 0; res = await pedir(); }
+    if (!res.ok) throw err(res.status === 401 ? 'nosesion' : 'http', 'HTTP ' + res.status);
+  }
   async function login(correo, clave) {
     setSes(await auth('token?grant_type=password', { email: correo, password: clave }));
   }
@@ -94,5 +102,5 @@
     $('sb-p').onkeydown = ev => { if (ev.key === 'Enter') ir(); };
     $('sb-x').onclick = ev => { ev.preventDefault(); cerrarLogin(); };
   }
-  window.SB = { activo, conSesion: () => !!ses, email: () => (ses && ses.email) || '', coleccion, guardar, login, salir, pedirLogin };
+  window.SB = { activo, conSesion: () => !!ses, email: () => (ses && ses.email) || '', coleccion, guardar, borrar, login, salir, pedirLogin };
 })();

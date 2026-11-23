@@ -142,7 +142,7 @@ let datos = { levantarse: '08:30', calendario: [], tareas: [], pendientes: {}, o
 let est = safe.get('tablero-estado', null);
 if (!est || est.fecha !== hoyKey()) {
   const prev = est || {};
-  est = { fecha: hoyKey(), hechos: {}, inicios: {}, pasoManana: 0, pasoCierre: 0, forzar: null, modo: null, inbox: prev.inbox || [], totales: prev.totales || { poemas: 0, llegadas_9: 0 }, sueno: prev.sueno || '00:00', desayuno: prev.desayuno || false, extra: prev.extra || [], dias: prev.dias || {}, cerradas: prev.cerradas || {}, comprasPend: prev.comprasPend || [] };
+  est = { fecha: hoyKey(), hechos: {}, inicios: {}, pasoManana: 0, pasoCierre: 0, forzar: null, modo: null, inbox: prev.inbox || [], totales: prev.totales || { poemas: 0, llegadas_9: 0 }, sueno: prev.sueno || '00:00', desayuno: prev.desayuno || false, extra: prev.extra || [], dias: prev.dias || {}, cerradas: prev.cerradas || {}, comprasPend: prev.comprasPend || [], registrosPend: prev.registrosPend || [] };
 }
 est.inicios = est.inicios || {}; est.pasoCierre = est.pasoCierre || 0; est.mov = est.mov || {}; est.oculto = est.oculto || {}; est.tocado = est.tocado || {}; est.extra = est.extra || []; est.dias = est.dias || {}; est.cerradas = est.cerradas || {};
 let tema = safe.get('tablero-tema', 'claro');
@@ -600,7 +600,7 @@ function render() {
 function accion(a, v, el, ev) {
   switch (a) {
     case 'frase': fraseAbierta = !fraseAbierta; break;
-    case 'comi': est.hechos.comida = true; celebrar('🍽️ Buen provecho. Anotado.', false); break;
+    case 'comi': est.hechos.comida = true; comidoAviso('comida', true); celebrar('🍽️ Buen provecho. Anotado.', false); break;
     case 'compro': {
       const f = (datos.faltantes || []).find(x => x.id === v);
       if (f) { est.comprasPend = (est.comprasPend || []).filter(x => x.id !== f.id).concat([f.raw || { id: f.id, articulo: f.articulo }]); datos.faltantes = datos.faltantes.filter(x => x.id !== v); toast('✓ Comprado: ' + f.articulo); enviarCompras(); }
@@ -641,6 +641,7 @@ function accion(a, v, el, ev) {
     case 'reiniciaPlan': { const s = S(); s.mov = {}; s.oculto = {}; s.tocado = {}; s.congelado = false; sel = null; toast('Todo en automático'); break; }
     case 'ok': {
       est.hechos[v] = !est.hechos[v];
+      comidoAviso(v, est.hechos[v]);
       // Una tarea del Sheet que se marca como hecha NO debe reaparecer mañana: se recuerda aquí y se avisa a Claude para que la cierre en el Sheet
       const tareaSheet = (datos.tareas || []).find(t => t.id === v);
       if (tareaSheet) {
@@ -884,6 +885,24 @@ function aplicaComido() {
   return cambio;
 }
 // "Comprado" en Mi día: se avisa a Hungry (que repone la alacena); sin internet queda en cola
+// "Ya comí" en Mi día también llega a Hungry (mismo documento que su botón «Ya comí esto», así no se duplica); sin internet queda en cola
+function comidoAviso(v, hecho) {
+  const m = v === 'comida' ? 'comida' : String(v).startsWith('com-') ? String(v).slice(4) : null; if (!m) return;
+  const id = hoyKey() + '-plan-' + m, p = (datos.plan || []).find(x => x.id === m), d = new Date();
+  est.registrosPend = (est.registrosPend || []).filter(x => x.id !== id);
+  if (hecho) {
+    if (((datos.comido && datos.comido.momentos) || []).includes(m)) return;   // Hungry ya lo tiene (foto, búsqueda…): no se duplica
+    est.registrosPend.push({ op: 'set', id, data: { id, fecha: hoyKey(), hora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), ts: Date.now(), momento: m, nombre: p ? p.comida : 'Comida', kcal: Number(p && p.kcal) || 0, prot: Number(p && p.proteina) || 0, aprox: true, origen: 'midia', items: [] } });
+  } else est.registrosPend.push({ op: 'del', id });
+  enviarRegistros();
+}
+async function enviarRegistros() {
+  if (!(window.SB && SB.activo() && SB.conSesion()) || !(est.registrosPend || []).length) return;
+  for (const o of est.registrosPend.slice()) {
+    try { if (o.op === 'set') await SB.guardar('comida/registro/' + o.id, o.data); else await SB.borrar('comida/registro/' + o.id); est.registrosPend = est.registrosPend.filter(x => x !== o && x.id !== o.id); } catch (e) { break; }
+  }
+  guardar();
+}
 async function enviarCompras() {
   if (!(window.SB && SB.activo() && SB.conSesion()) || !(est.comprasPend || []).length) return;
   for (const f of est.comprasPend.slice()) { try { await SB.guardar('comida/faltantes/' + f.id, { ...f, estado: 'comprado', ts: Date.now() }); est.comprasPend = est.comprasPend.filter(x => x.id !== f.id); } catch (e) { break; } }
@@ -913,7 +932,7 @@ async function actualizar(manual) {
   try {
     if (window.SB && SB.activo()) {
       if (!SB.conSesion()) { SB.pedirLogin(); const e = new Error('sin sesión'); e.code = 'nosesion'; throw e; }
-      await enviarCompras();
+      await enviarCompras(); await enviarRegistros();
       datos = await desdeSupabase(); safe.set('tablero-datos', datos); aplicaComido();
       estadoSync = 'Actualizado de tu cuenta a las ' + new Date().toTimeString().slice(0, 5) + '.';
     } else if (window.TABLERO && window.TABLERO.pub) {
@@ -1002,7 +1021,7 @@ setInterval(pintaSol, 60000);   // el sol se mueve aunque haya algo abierto
 setInterval(async () => {
   if (document.hidden || planAbierto || menuAbierto || !(window.SB && SB.activo() && SB.conSesion()) || navigator.onLine === false) return;
   if (document.querySelector('details[open]') || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) return;
-  try { await enviarCompras(); datos = await desdeSupabase(); safe.set('tablero-datos', datos); aplicaComido(); render(); } catch (e) { }
+  try { await enviarCompras(); await enviarRegistros(); datos = await desdeSupabase(); safe.set('tablero-datos', datos); aplicaComido(); render(); } catch (e) { }
 }, 45000);
 datos = safe.get('tablero-datos', datos);
 render();

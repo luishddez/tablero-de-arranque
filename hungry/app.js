@@ -71,7 +71,7 @@
   function guardarRegistro(o) {
     const d = new Date(), id = hoyK() + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '-' + Math.floor(Math.random() * 90 + 10);
     const r = { id, fecha: hoyK(), hora: pad(d.getHours()) + ':' + pad(d.getMinutes()), ts: Date.now(), momento: 'extra', aprox: false, origen: 'busqueda', items: [], ...o };
-    HDB.set('comida/registro/' + id, r); return r;
+    HDB.set('comida/registro/' + r.id, r); return r;
   }
   HG.guardarRegistro = guardarRegistro; HG.regHoy = regHoy; HG.suma = suma;
   const aplica = p => p.dias !== 'gym' || dia().gym;
@@ -151,7 +151,7 @@
   HG.acc.tab = b => { HG.tab = b.dataset.t; HG.render(); };
   HG.acc.comi = b => {
     const p = plan().find(x => x.id === b.dataset.id); if (!p) return;
-    guardarRegistro({ momento: p.id, nombre: p.comida, kcal: Number(p.kcal) || 0, prot: Number(p.proteina_g) || 0, aprox: true, origen: 'plan', items: [{ nombre: p.que_lleva }] });
+    guardarRegistro({ id: hoyK() + '-plan-' + p.id, momento: p.id, nombre: p.comida, kcal: Number(p.kcal) || 0, prot: Number(p.proteina_g) || 0, aprox: true, origen: 'plan', items: [{ nombre: p.que_lleva }] });
     toast('Anotado: ' + p.comida); HG.render();
   };
   HG.acc.deshacer = b => { regHoy().filter(r => r.momento === b.dataset.id).forEach(r => HDB.del('comida/registro/' + r.id)); HG.render(); };
