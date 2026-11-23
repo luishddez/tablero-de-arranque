@@ -1,5 +1,5 @@
 const V = 'hungry-v2';
-const FILES = ['./', 'index.html', 'app.js', 'db.js', 'alimentos.js', 'platillos.js', 'manifest.json', 'icon-192.png'];
+const FILES = ['./', 'index.html', 'app.js', 'db.js', 'alimentos.js', 'platillos.js', 'dieta.js', 'entrevista.js', 'manifest.json', 'icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x))))); self.clients.claim(); });
 // Red primero (una versión nueva se ve sola); sin internet usa lo guardado.
