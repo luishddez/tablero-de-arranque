@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hungry</title>
+<meta name="theme-color" content="#2f5d3a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hungry">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1c1c1a;--mut:#6b6b64;--br:#e3e0d6;--ac:#2f5d3a;--ac2:#e9f1e6;--warn:#b45309;--warn2:#fdf0dc;--bad:#b3261e;--bad2:#fbe5e3;--ok:#1d7a3a}
+@media(prefers-color-scheme:dark){:root{--bg:#141613;--card:#1e211c;--tx:#ecebe4;--mut:#9c9c92;--br:#2e322a;--ac:#7fc08d;--ac2:#22301f;--warn:#f0b35a;--warn2:#33291a;--bad:#f2928b;--bad2:#3a1f1d;--ok:#7fd38f}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
+#app{max-width:640px;margin:0 auto;padding:12px 14px 96px}
+h1{font-size:22px;margin:6px 0 2px}h2{font-size:17px;margin:18px 0 8px}h3{font-size:15px;margin:12px 0 6px}
+.mut{color:var(--mut);font-size:13px}.nota{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin:8px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+button,.btn{font:inherit;border:1px solid var(--br);background:var(--card);color:var(--tx);border-radius:10px;padding:9px 12px;cursor:pointer}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff}@media(prefers-color-scheme:dark){button.pri{color:#10200f}}
+button.sm{padding:5px 9px;font-size:14px}button.ghost{background:transparent}button.bad{color:var(--bad)}
+button:disabled{opacity:.5}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--br);border-radius:10px;padding:9px;width:100%}
+input[type=checkbox],input[type=radio]{width:auto}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--br);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.tabs button{flex:1;border:0;border-radius:0;background:transparent;padding:9px 2px 8px;font-size:11px;color:var(--mut)}
+.tabs button b{display:block;font-size:20px;line-height:1.1}.tabs button.on{color:var(--ac);font-weight:700}
+.bar{height:10px;background:var(--br);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ac)}
+.bar.over i{background:var(--warn)}
+.chip{display:inline-block;padding:3px 9px;border-radius:99px;background:var(--ac2);color:var(--ac);font-size:12px;margin:2px 3px 2px 0}
+.chip.w{background:var(--warn2);color:var(--warn)}.chip.b{background:var(--bad2);color:var(--bad)}
+.it{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--br)}.it:first-child{border-top:0}
+.em{font-size:26px;width:34px;text-align:center}
+.q{display:flex;align-items:center;gap:6px}.q button{width:34px;padding:6px 0}.q span{min-width:54px;text-align:center;font-weight:600}
+.estado{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--ac2);color:var(--ac)}.estado.w{background:var(--warn2);color:var(--warn)}.estado.b{background:var(--bad2);color:var(--bad)}
+.macros{display:flex;gap:10px;font-size:13px;color:var(--mut)}.macros b{color:var(--tx)}
+.tinder{position:relative;height:340px;touch-action:pan-y;user-select:none}
+.tcard{position:absolute;inset:0;background:var(--card);border:1px solid var(--br);border-radius:22px;padding:20px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.12);touch-action:none}
+.tcard .big{font-size:96px;line-height:1.1}.tcard h3{font-size:22px;margin:8px 0 2px}
+.tcard .sello{position:absolute;top:18px;padding:3px 12px;border:3px solid;border-radius:8px;font-weight:800;font-size:22px;opacity:0;transform:rotate(-12deg)}
+.sello.si{left:18px;color:var(--ok)}.sello.no{right:18px;color:var(--bad);transform:rotate(12deg)}
+.tbtn{display:flex;justify-content:center;gap:28px;margin-top:12px}.tbtn button{width:72px;height:72px;border-radius:50%;font-size:30px;padding:0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.modal>div{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 14px 28px}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:9px 15px;border-radius:99px;font-size:14px;z-index:60;max-width:90%}
+.seg{display:flex;gap:6px;margin:6px 0}.seg button{flex:1}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media(prefers-color-scheme:dark){.seg button.on{color:#10200f}}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav class="tabs" id="tabs"></nav>
+<script src="alimentos.js"></script>
+<script src="platillos.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
+<script src="dieta.js"></script>
+</body>
+</html>

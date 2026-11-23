@@ -1,0 +1,31 @@
+// Platillos base de Hungry: ingredientes = [id del catálogo, gramos]. Las calorías y macros se calculan con alimentos.js.
+// t = momentos donde encaja (d desayuno, c comida, p previa al gym, n cena, s colación).
+window.HG_PLATILLOS = [
+  { id: 'licuado-avena', n: 'Licuado de avena con plátano', t: 'd', i: [['leche-entera', 244], ['avena', 40], ['platano', 118], ['crema-cacahuate', 16]], nota: 'Licúa todo. Para la previa, sin crema de cacahuate.' },
+  { id: 'huevos-mexicana', n: 'Huevos a la mexicana con tortillas', t: 'dn', i: [['huevo', 150], ['jitomate', 60], ['cebolla', 20], ['tortilla-maiz', 60]], nota: 'Sofríe cebolla y jitomate, agrega el huevo.' },
+  { id: 'huevos-frijoles', n: 'Huevos con frijoles y tortillas', t: 'n', i: [['huevo', 200], ['frijol-pinto', 170], ['tortilla-maiz', 60]], nota: 'Tu cena clásica.' },
+  { id: 'pollo-arroz', n: 'Pollo con arroz y brócoli', t: 'c', i: [['pollo-pechuga', 150], ['arroz-cocido', 240], ['brocoli', 90], ['aguacate', 50]], nota: 'Peso del pollo en crudo.' },
+  { id: 'bistec-papas', n: 'Bistec con papas y ensalada', t: 'c', i: [['res-bistec', 150], ['papa', 300], ['lechuga', 47], ['jitomate', 62], ['aguacate', 50]], nota: 'Peso de la carne en crudo.' },
+  { id: 'pasta-atun', n: 'Pasta con atún y jitomate', t: 'c', i: [['pasta-cocida', 210], ['atun-agua', 220], ['jitomate', 123], ['aceite-oliva', 14]], nota: '2 latas de atún.' },
+  { id: 'tacos-pollo', n: 'Tacos de pollo con cebolla y aguacate', t: 'cn', i: [['pollo-pechuga', 150], ['tortilla-maiz', 90], ['cebolla', 30], ['aguacate', 50]], nota: 'Pollo en crudo.' },
+  { id: 'res-arroz-frijol', n: 'Carne molida con arroz y frijoles', t: 'c', i: [['res-molida', 150], ['arroz-cocido', 160], ['frijol-negro', 170], ['jitomate', 60]], nota: 'Carne en crudo.' },
+  { id: 'salmon-quinoa', n: 'Salmón con quinoa y brócoli', t: 'cn', i: [['salmon', 150], ['quinoa', 185], ['brocoli', 90]], nota: 'Salmón en crudo.' },
+  { id: 'tilapia-arroz', n: 'Tilapia con arroz y ensalada', t: 'c', i: [['tilapia', 150], ['arroz-cocido', 200], ['lechuga', 47], ['pepino', 100], ['aceite-oliva', 7]], nota: 'Pescado en crudo.' },
+  { id: 'camaron-pasta', n: 'Camarones al ajo con pasta y calabacita', t: 'c', i: [['camaron', 120], ['pasta-cocida', 140], ['calabacita', 113], ['aceite-oliva', 10]], nota: 'Camarón en crudo.' },
+  { id: 'lentejas-arroz', n: 'Lentejas con arroz y huevo', t: 'c', i: [['lentejas', 200], ['arroz-cocido', 120], ['huevo', 100], ['jitomate', 60]], nota: '' },
+  { id: 'tofu-saltado', n: 'Tofu salteado con arroz y brócoli', t: 'cn', i: [['tofu', 150], ['arroz-cocido', 158], ['brocoli', 90], ['aceite-oliva', 7]], nota: '' },
+  { id: 'avena-fruta', n: 'Avena con leche, plátano y nuez', t: 'd', i: [['avena', 60], ['leche-descremada', 245], ['platano', 118], ['nuez', 14]], nota: 'Cuece la avena con la leche.' },
+  { id: 'yogurt-fresa', n: 'Yogurt griego con fresa, avena y miel', t: 'ds', i: [['yogurt-griego', 340], ['fresa', 150], ['avena', 30], ['miel', 10]], nota: '' },
+  { id: 'quesadilla-nopal', n: 'Quesadillas de nopal', t: 'n', i: [['tortilla-maiz', 90], ['queso-mozzarella', 60], ['nopal', 86]], nota: '' },
+  { id: 'sandwich-atun', n: 'Sándwich de atún con aguacate', t: 'ns', i: [['pan-integral', 56], ['atun-agua', 110], ['aguacate', 30], ['jitomate', 40]], nota: '' },
+  { id: 'omelette-espinaca', n: 'Omelette de espinaca con cottage y pan', t: 'dn', i: [['huevo', 150], ['espinaca', 60], ['queso-cottage', 60], ['pan-integral', 28]], nota: '' },
+  { id: 'camote-pollo', n: 'Muslo de pollo con camote y ejotes', t: 'c', i: [['pollo-muslo', 150], ['camote', 200], ['ejote', 110]], nota: 'Pollo y camote en crudo.' },
+  { id: 'cerdo-frijoles', n: 'Lomo de cerdo con frijoles y nopales', t: 'c', i: [['cerdo-lomo', 150], ['frijol-negro', 170], ['tortilla-maiz', 60], ['nopal', 86]], nota: 'Cerdo en crudo.' },
+  { id: 'platano-previa', n: 'Plátano con avena y leche', t: 'ps', i: [['platano', 118], ['avena', 40], ['leche-descremada', 245]], nota: 'Sin grasa extra antes de entrenar.' },
+  { id: 'pan-miel', n: 'Pan integral con miel y leche', t: 'ps', i: [['pan-integral', 84], ['miel', 20], ['leche-descremada', 245]], nota: 'Ligero antes de entrenar.' },
+  { id: 'manzana-avena', n: 'Manzana con avena y leche', t: 'ps', i: [['manzana', 182], ['avena', 40], ['leche-descremada', 245]], nota: '' },
+  { id: 'platano-crema', n: 'Plátano con crema de cacahuate', t: 's', i: [['platano', 118], ['crema-cacahuate', 32]], nota: '' },
+  { id: 'cottage-durazno', n: 'Queso cottage con durazno y almendras', t: 'sn', i: [['queso-cottage', 200], ['durazno', 150], ['almendra', 14]], nota: '' },
+  { id: 'garbanzo-atun', n: 'Ensalada de garbanzo con atún', t: 'c', i: [['garbanzo', 164], ['atun-agua', 110], ['jitomate', 123], ['pepino', 100], ['cebolla', 30], ['aceite-oliva', 10]], nota: '' },
+  { id: 'papa-huevo', n: 'Papa con huevo y espinaca', t: 'n', i: [['papa', 200], ['huevo', 150], ['espinaca', 60]], nota: '' }
+];

@@ -21,6 +21,8 @@
   }
   let refrescando = null;
   async function token() {
+    // Hungry comparte esta sesión: si ya la renovó, tomamos la nueva (los tokens de renovación rotan)
+    try { const s = JSON.parse(localStorage.getItem(SK) || 'null'); if (s && (!ses || s.exp > ses.exp)) ses = s; } catch (e) { }
     if (!ses) throw err('nosesion');
     if (ses.exp - 60 > Math.floor(Date.now() / 1000)) return ses.at;
     if (!refrescando) {
@@ -41,6 +43,15 @@
     const filas = await res.json();
     const n = prefijo.split('/').length + 1;
     return (filas || []).filter(f => f.path.split('/').length === n).map(f => f.data);
+  }
+  // Escribe un documento de TU cuenta (solo lo usa "Comprado": Mi día avisa a Hungry qué ya se compró)
+  async function guardar(path, data) {
+    let u = null; try { u = JSON.parse(atob(ses.at.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub; } catch (e) { }
+    if (!u) throw err('nosesion');
+    const pedir = async () => fetch(C.url + '/rest/v1/docs?on_conflict=user_id,path', { method: 'POST', headers: { apikey: C.key, Authorization: 'Bearer ' + await token(), 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: u, path, data, updated_at: new Date().toISOString() }) });
+    let res = await pedir();
+    if (res.status === 401) { if (ses) ses.exp = 0; res = await pedir(); }
+    if (!res.ok) throw err(res.status === 401 ? 'nosesion' : 'http', 'HTTP ' + res.status);
   }
   async function login(correo, clave) {
     setSes(await auth('token?grant_type=password', { email: correo, password: clave }));
@@ -83,5 +94,5 @@
     $('sb-p').onkeydown = ev => { if (ev.key === 'Enter') ir(); };
     $('sb-x').onclick = ev => { ev.preventDefault(); cerrarLogin(); };
   }
-  window.SB = { activo, conSesion: () => !!ses, email: () => (ses && ses.email) || '', coleccion, login, salir, pedirLogin };
+  window.SB = { activo, conSesion: () => !!ses, email: () => (ses && ses.email) || '', coleccion, guardar, login, salir, pedirLogin };
 })();

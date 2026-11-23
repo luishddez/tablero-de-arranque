@@ -142,7 +142,7 @@ let datos = { levantarse: '08:30', calendario: [], tareas: [], pendientes: {}, o
 let est = safe.get('tablero-estado', null);
 if (!est || est.fecha !== hoyKey()) {
   const prev = est || {};
-  est = { fecha: hoyKey(), hechos: {}, inicios: {}, pasoManana: 0, pasoCierre: 0, forzar: null, modo: null, inbox: prev.inbox || [], totales: prev.totales || { poemas: 0, llegadas_9: 0 }, sueno: prev.sueno || '00:00', desayuno: prev.desayuno || false, extra: prev.extra || [], dias: prev.dias || {}, cerradas: prev.cerradas || {} };
+  est = { fecha: hoyKey(), hechos: {}, inicios: {}, pasoManana: 0, pasoCierre: 0, forzar: null, modo: null, inbox: prev.inbox || [], totales: prev.totales || { poemas: 0, llegadas_9: 0 }, sueno: prev.sueno || '00:00', desayuno: prev.desayuno || false, extra: prev.extra || [], dias: prev.dias || {}, cerradas: prev.cerradas || {}, comprasPend: prev.comprasPend || [] };
 }
 est.inicios = est.inicios || {}; est.pasoCierre = est.pasoCierre || 0; est.mov = est.mov || {}; est.oculto = est.oculto || {}; est.tocado = est.tocado || {}; est.extra = est.extra || []; est.dias = est.dias || {}; est.cerradas = est.cerradas || {};
 let tema = safe.get('tablero-tema', 'claro');
@@ -329,6 +329,9 @@ function vistaHoy() {
   (datos.avisos || []).forEach(a => h += `<div class="aviso">${esc(a)}</div>`);
   // los domingos: la lista del súper de la semana, a la vista
   if (new Date().getDay() === 0 && (datos.compras || []).length) h += `<div class="card" style="margin:0 0 8px"><b>🛒 Súper de hoy</b>${listaCompras()}</div>`;
+  // de Hungry: qué falta en la alacena y cuánto llevas comido
+  if ((datos.faltantes || []).length) h += `<div class="card" style="margin:0 0 8px"><b>🛒 Por comprar</b> <span class="nota">· de tu alacena en Hungry</span>${datos.faltantes.map(f => `<div class="it2"><label><input type="checkbox" data-a="compro" data-v="${esc(f.id)}"> ${esc(f.emoji)} ${esc(f.articulo)} <span class="nota">· ${esc(f.cantidad)}${f.donde ? ' · ' + esc(f.donde) : ''}</span></label></div>`).join('')}<div class="row" style="margin-top:6px"><a class="btn" href="hungry/">Abrir Hungry</a></div></div>`;
+  if (datos.comido && datos.comido.k) h += `<div class="nota" style="margin:0 0 8px">🍽️ Hoy llevas <b>${datos.comido.k} kcal</b> y ${datos.comido.p} g de proteína registrados en Hungry. <a href="hungry/">Abrir</a></div>`;
 
   // HERO: ahora
   const forzado = est.forzar;
@@ -454,6 +457,7 @@ function vistaMenu() {
   const hs = horasSueno();
   let h = `<div class="top"><h1>Menú</h1><button data-a="cerrarMenu">Cerrar</button></div>`;
   h += `<div class="card"><div class="row"><button class="pri" data-a="actualizar">Actualizar</button><button data-a="tema">Fondo: ${tema === 'claro' ? 'claro' : 'oscuro'} (cambiar)</button><button data-a="sonido">Alerta de comida: ${sonidoComida ? 'con sonido' : 'sin sonido'}</button></div><div class="nota" style="margin-top:8px">${esc(estadoSync) || 'Se actualiza solo al abrir y al volver el internet.'}</div></div>`;
+  h += `<div class="card"><a class="btn pri" href="hungry/" style="display:inline-block;text-decoration:none">🥗 Abrir Hungry</a><div class="nota" style="margin-top:6px">Tu alimentación: régimen, alacena, compras y registro. Se sincroniza con este tablero.</div></div>`;
   h += `<h3>Notas por acomodar (${est.inbox.length})</h3><div class="card">${est.inbox.map(n => `<div class="it2">${n.enviada ? '✓' : '⏳'} ${esc(n.t)} <span class="nota">${n.enviada ? '· enviada' : '· en cola'}</span></div>`).join('') || '<div class="nota">Nada pendiente.</div>'}${est.inbox.length ? '<div class="row" style="margin-top:8px"><button data-a="reenviar">Enviar ahora</button><button data-a="limpiaInbox">Limpiar lista</button></div><div class="nota" style="margin-top:6px">Las notas se mandan solas. Claude las organiza cuando abres una conversación con él.</div>' : ''}</div>`;
   if ((datos.plan || []).length) h += `<h3>Plan de alimentación</h3><div class="card">${datos.plan.map(p => `<div class="it2"><b>${esc(fmt(toMin(p.hora || '00:00')))} · ${esc(p.comida)}</b> <span class="nota">· ${esc(p.kcal)} kcal · ${esc(p.proteina)} g de proteína${p.dias === 'gym' ? ' · días de gym' : ''}</span><div class="nota">${esc(p.que_lleva)}</div></div>`).join('')}</div>`;
   if ((datos.compras || []).length) h += `<h3>Compras de la semana</h3><div class="card">${listaCompras()}</div>`;
@@ -597,6 +601,11 @@ function accion(a, v, el, ev) {
   switch (a) {
     case 'frase': fraseAbierta = !fraseAbierta; break;
     case 'comi': est.hechos.comida = true; celebrar('🍽️ Buen provecho. Anotado.', false); break;
+    case 'compro': {
+      const f = (datos.faltantes || []).find(x => x.id === v);
+      if (f) { est.comprasPend = (est.comprasPend || []).filter(x => x.id !== f.id).concat([f.raw || { id: f.id, articulo: f.articulo }]); datos.faltantes = datos.faltantes.filter(x => x.id !== v); toast('✓ Comprado: ' + f.articulo); enviarCompras(); }
+      break;
+    }
     case 'sonido': sonidoComida = !sonidoComida; safe.set('tablero-sonido', sonidoComida); if (sonidoComida) pitido(); break;
     case 'vista': vistaSel = v; render(); $('#vista').scrollTop = 0; return;
     case 'dia': vistaSel = 'd:' + v; render(); $('#vista').scrollTop = 0; return;
@@ -682,6 +691,7 @@ document.addEventListener('change', e => {
   if (t.dataset.a === 'horaExacta' && sel && t.value) fijar(sel, toMin(t.value));
   if (t.dataset.a === 'sueno') { est.sueno = t.value || '00:00'; render(); }
   if (t.dataset.a === 'desayuno') { est.desayuno = t.checked; render(); }
+  if (t.dataset.a === 'compro' && t.checked) accion('compro', t.dataset.v, t, e);
 });
 $('#capIn').addEventListener('keydown', e => { if (e.key === 'Enter') anotar(); });
 function anotar() {
@@ -846,7 +856,7 @@ async function desdeSheet() {
 // Si el calendario de la cuenta está vacío o lleva más de 3 horas sin latido, se intenta el Sheet publicado; si tampoco hay, se usa lo último guardado.
 async function desdeSupabase() {
   const g = window.TABLERO.gids;
-  const [tarD, planD, comD, diaD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras'), SB.coleccion('dia').catch(() => [])]);
+  const [tarD, planD, comD, diaD, falD, regD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras'), SB.coleccion('dia').catch(() => []), SB.coleccion('comida/faltantes').catch(() => []), SB.coleccion('comida/registro').catch(() => [])]);
   const ord = (a, b) => (a.orden || 0) - (b.orden || 0);
   const tar = tarD.sort(ord).map(t => ({ ...t, minutos: String(t.minutos ?? ''), prioridad: String(t.prioridad ?? ''), esencial: t.esencial ? 'sí' : 'no' }));
   const plan = planD.sort(ord).map(p => ({ ...p, kcal: String(p.kcal ?? ''), proteina_g: String(p.proteina_g ?? ''), minutos: String(p.minutos ?? '') }));
@@ -859,7 +869,25 @@ async function desdeSupabase() {
   if (calC.length && fresco) cal = calC;
   else { try { cal = await csv(g.calendario); } catch (e) { cal = calC.length ? calC : null; } }
   if (cal && cal === calC) { const k = e => normFecha(e.fecha) + ' ' + (e.inicio || ''); cal = calC.slice().sort((a, b) => k(a).localeCompare(k(b))); }
-  return armar(tar, cal || [], plan, compras, cal ? null : (datos.calendario || []));
+  const d = armar(tar, cal || [], plan, compras, cal ? null : (datos.calendario || []));
+  // De Hungry: lo que falta por comprar y lo que llevas comido hoy
+  const pend = (est.comprasPend || []).map(f => f.id);
+  d.faltantes = falD.filter(f => f && f.articulo && f.estado === 'falta' && !pend.includes(f.id)).sort((a, b) => (a.pasillo || '').localeCompare(b.pasillo || '') || a.articulo.localeCompare(b.articulo)).map(f => ({ id: f.id, articulo: f.articulo, emoji: f.emoji || '', cantidad: f.cantidad_texto || '', pasillo: f.pasillo || '', donde: f.donde || '', raw: f }));
+  const rh = regD.filter(r => r && r.fecha === hoyKey());
+  d.comido = { k: Math.round(rh.reduce((s, r) => s + (r.kcal || 0), 0)), p: Math.round(rh.reduce((s, r) => s + (r.prot || 0), 0)), momentos: rh.map(r => r.momento) };
+  return d;
+}
+// Lo que Hungry ya registró hoy marca esas comidas como hechas aquí
+function aplicaComido() {
+  const mm = (datos.comido && datos.comido.momentos) || []; let cambio = false;
+  mm.forEach(m => { const k = m === 'comida' ? 'comida' : 'com-' + m; if (m !== 'extra' && !est.hechos[k]) { est.hechos[k] = true; cambio = true; } });
+  return cambio;
+}
+// "Comprado" en Mi día: se avisa a Hungry (que repone la alacena); sin internet queda en cola
+async function enviarCompras() {
+  if (!(window.SB && SB.activo() && SB.conSesion()) || !(est.comprasPend || []).length) return;
+  for (const f of est.comprasPend.slice()) { try { await SB.guardar('comida/faltantes/' + f.id, { ...f, estado: 'comprado', ts: Date.now() }); est.comprasPend = est.comprasPend.filter(x => x.id !== f.id); } catch (e) { break; } }
+  guardar();
 }
 // Arma los datos del día a partir de filas con las mismas columnas del Sheet (vengan del CSV o de Supabase)
 function armar(tar, cal, plan, compras, calListo) {
@@ -885,7 +913,8 @@ async function actualizar(manual) {
   try {
     if (window.SB && SB.activo()) {
       if (!SB.conSesion()) { SB.pedirLogin(); const e = new Error('sin sesión'); e.code = 'nosesion'; throw e; }
-      datos = await desdeSupabase(); safe.set('tablero-datos', datos);
+      await enviarCompras();
+      datos = await desdeSupabase(); safe.set('tablero-datos', datos); aplicaComido();
       estadoSync = 'Actualizado de tu cuenta a las ' + new Date().toTimeString().slice(0, 5) + '.';
     } else if (window.TABLERO && window.TABLERO.pub) {
       datos = await desdeSheet(); safe.set('tablero-datos', datos);
@@ -969,6 +998,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && !r
 enviarPendientes();
 setInterval(() => { if (revisaDia()) return; if (!menuAbierto && !planAbierto && !document.querySelector('details[open]')) render(); }, 60000);
 setInterval(pintaSol, 60000);   // el sol se mueve aunque haya algo abierto
+// Mi día y Hungry se hablan en menos de 1 minuto: con la app a la vista se revisa tu cuenta cada 45 s (sin tocar lo que estés editando)
+setInterval(async () => {
+  if (document.hidden || planAbierto || menuAbierto || !(window.SB && SB.activo() && SB.conSesion()) || navigator.onLine === false) return;
+  if (document.querySelector('details[open]') || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) return;
+  try { await enviarCompras(); datos = await desdeSupabase(); safe.set('tablero-datos', datos); aplicaComido(); render(); } catch (e) { }
+}, 45000);
 datos = safe.get('tablero-datos', datos);
 render();
 actualizar(false);
