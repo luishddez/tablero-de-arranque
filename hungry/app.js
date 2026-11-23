@@ -14,7 +14,7 @@
   const HG = window.HG = { $, esc, A, AM, r0, r1, nut, hoyK, fechaK, toMin, slug, acc: {}, vistas: {}, tab: 'hoy', sub: {} };
 
   // ---------- acceso a datos ----------
-  const plan = () => HDB.hijos('comida/plan').filter(p => p && p.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  const plan = () => HDB.hijos('comida/regimen').filter(p => p && p.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   const alacena = () => HDB.hijos('comida/alacena').filter(x => x && x.id);
   const faltantes = () => HDB.hijos('comida/faltantes').filter(x => x && x.id);
   const registro = () => HDB.hijos('comida/registro').filter(x => x && x.id);
@@ -130,7 +130,7 @@
     const sobra = r0(meta - S.k), over = meta && S.k > meta * 1.05, hr = new Date().getHours(), saludo = hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches';
     const mb = (n, v, t, cls) => `<div class="mb"><div class="row"><span class="sp">${n}</span><b>${r0(v)}</b><span class="mut">${t ? ' / ' + r0(t) : ''} g</span></div><div class="bar ${cls || ''}"><i style="width:${t ? Math.min(100, v / t * 100) : 0}%"></i></div></div>`;
     let h = `<div class="row"><div class="sp"><div class="mut">${new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, c => c.toUpperCase())}</div><h1>${saludo}</h1></div>${pill()}</div>`;
-    if (!plan().length) h += `<div class="vacio"><div class="big">🥗</div><b>Aún no tienes régimen</b><p>Arma uno en <b>Dieta</b> en unos minutos, o carga el que ya usas en Mi día.</p><button class="pri" data-a="tab" data-t="dieta">Armar mi dieta</button></div>`;
+    if (!plan().length) h += `<div class="vacio"><div class="big">🥗</div><b>Bienvenido a Hungry</b><p>Armo tu régimen desde cero: te pregunto por tu cuerpo, tu objetivo, tu salud y tus gustos, y te propongo comidas con calorías y porciones. Son unos 5 minutos.</p><button class="pri" data-a="empezar">Empezar</button>${HDB.hijos('comida/plan').length ? '<div style="margin-top:10px"><button class="sm ghost" data-a="importar">Ya tenía un plan en Mi día: importarlo</button></div>' : ''}</div>`;
     else {
       h += `<div class="hero"><div class="ring ${over ? 'over' : ''}" style="--p:${pct}"><div><b>${r0(S.k)}</b><span>de ${r0(meta)} kcal</span></div></div><div class="hs"><div class="hl">${over ? `Te pasaste <b>${-sobra} kcal</b>` : sobra > 0 ? `Te quedan <b>${sobra} kcal</b>` : '¡Meta cumplida!'}</div>${mb('Proteína', S.pr, mp)}${mb('Carbs', S.c, M && M.carb, 'sec')}${mb('Grasa', S.gr, M && M.grasa, 'sec')}</div></div>`;
       h += `<label class="sw"><input type="checkbox" data-i="gym" ${dia().gym ? 'checked' : ''}><span class="knob"></span> Hoy entreno <span class="mut">(suma tu licuado previo)</span></label>`;
@@ -156,6 +156,12 @@
     }
     return h;
   };
+  HG.acc.empezar = () => { HG.tab = 'dieta'; HG.sub.dsec = 'datos'; HG.render(); window.scrollTo(0, 0); };
+  HG.acc.alregimen = () => {
+    const ya = new Set(alacena().map(x => x.id)); let n = 0;
+    plan().forEach(p => (p.opciones || []).forEach(o => (o.i || []).forEach(([id]) => { const a = AM[id]; if (!a || ya.has(id)) return; ya.add(id); n++; HDB.set('comida/alacena/' + id, { id, alimento_id: id, nombre: a.n.replace(/ (.*)/, ''), emoji: a.e, modo: 'aprox', nivel: 'no', cantidad: 0, unidad: a.u, minimo: 0, categoria: '', pasillo: a.p, donde: '', ts: Date.now() }); })));
+    sincronizarFaltantes(); toast(n ? n + ' ingredientes creados: marca los que ya tienes' : 'Ya estaban todos'); HG.tab = 'alacena'; HG.render();
+  };
   HG.acc.tab = b => { HG.tab = b.dataset.t; HG.render(); };
   HG.acc.comi = b => {
     const p = plan().find(x => x.id === b.dataset.id); if (!p) return;
@@ -179,7 +185,7 @@
   HG.vistas.alacena = function () {
     const q = (HG.sub.alq || '').toLowerCase(), f = HG.sub.alf || 'todo', todos = alacena(), nb = todos.filter(baja).length, L = todos.filter(x => (!q || x.nombre.toLowerCase().includes(q)) && (f === 'todo' || baja(x))), cats = categorias();
     let h = `<div class="row"><div class="sp"><h1>Alacena</h1><div class="mut">${todos.length} artículos · <b style="color:${nb ? 'var(--warn)' : 'var(--ok)'}">${nb} por reponer</b></div></div>${pill()}</div><div class="row" style="margin:10px 0"><input class="sp" style="min-width:120px" placeholder="🔎 Buscar…" data-i="alq" value="${esc(HG.sub.alq || '')}"><button class="pri" data-a="alta">＋ Agregar</button></div><div class="seg"><button data-a="alfil" data-v="todo" class="${f === 'todo' ? 'on' : ''}">Todo</button><button data-a="alfil" data-v="bajo" class="${f === 'bajo' ? 'on' : ''}">Por reponer</button><button data-a="cats">Categorías</button></div>`;
-    if (!alacena().length) h += `<div class="card">Tu alacena está vacía.<div class="nota" style="margin:6px 0">Puedo cargar los ${HDB.hijos('comida/compras').length} artículos de tu lista semanal para que solo marques lo que ya tienes.</div><button class="pri" data-a="cargarsem">Cargar mis artículos de la semana</button></div>`;
+    if (!alacena().length) h += `<div class="vacio"><div class="big">🥫</div><b>Tu alacena está vacía</b><p>Agrega lo que tienes en casa. Si ya armaste tu régimen, puedo crearla desde ahí y tú solo marcas lo que sí tienes.</p><div class="row" style="justify-content:center"><button class="pri" data-a="alta">＋ Agregar</button>${plan().length ? '<button data-a="alregimen">Crear desde mi régimen</button>' : ''}</div></div>`;
     const grupos = {}; L.forEach(x => { const c = (x.categoria && (cats.find(k => k.id === x.categoria) || {}).nombre) || 'Sin categoría'; (grupos[c] = grupos[c] || []).push(x); });
     Object.keys(grupos).sort().forEach(c => {
       h += `<h3>${esc(c)}</h3><div class="card">`;
@@ -198,13 +204,15 @@
   HG.acc.alfil = b => { HG.sub.alf = b.dataset.v; HG.render(); };
   HG.acc.nivel = b => { const x = HDB.get('comida/alacena/' + b.dataset.id); guardarAlacena({ ...x, nivel: { tengo: 'poco', poco: 'no', no: 'tengo' }[x.nivel || 'tengo'] }); };
   HG.acc.mas = b => { const x = HDB.get('comida/alacena/' + b.dataset.id), st = UNIDADES[x.unidad] || 1; guardarAlacena({ ...x, cantidad: Math.max(0, r1((Number(x.cantidad) || 0) + st * Number(b.dataset.d))) }); };
-  HG.acc.cargarsem = () => {
+  HG.acc.importar = () => {
+    if (!confirm('Voy a copiar a Hungry el plan y la lista que tenías en Mi día. ¿Continuar?')) return;
+    HDB.hijos('comida/plan').filter(p => p && p.id).forEach(p => HDB.set('comida/regimen/' + p.id, { ...p, origen: 'Importado de Mi día' }));
     const mapa = { 'leche-lala-100': ['leche-entera', 'l'], 'proteina-simi': [null, 'paquete'], 'avena-hojuelas': ['avena', 'paquete'], 'avena-polvo': ['avena', 'paquete'], platano: ['platano', 'pza'], 'crema-cacahuate': ['crema-cacahuate', 'pza'], espinacas: ['espinaca', 'paquete'], huevo: ['huevo', 'pza'], tortillas: ['tortilla-maiz', 'kg'], frijoles: ['frijol-pinto', 'kg'], pollo: ['pollo-pechuga', 'g'], 'carne-magra': ['res-bistec', 'g'], 'atun-agua': ['atun-agua', 'latas'], arroz: ['arroz-crudo', 'paquete'], papa: ['papa', 'pza'], pasta: ['pasta-cocida', 'paquete'], verduras: [null, 'paquete'], 'aguacate-aceite': ['aguacate', 'pza'] };
     HDB.hijos('comida/compras').filter(c => c && c.id).forEach(c => {
       const [aid, u] = mapa[c.id] || [null, 'pza'], a = aid && AM[aid];
       HDB.set('comida/alacena/' + c.id, { id: c.id, alimento_id: aid, nombre: c.articulo, emoji: a ? a.e : '🛒', modo: 'aprox', nivel: 'tengo', cantidad: 0, unidad: u, minimo: 0, categoria: '', pasillo: a ? a.p : 'Otros', donde: '', ts: Date.now() });
     });
-    toast('Listo: marca los que ya tienes o te faltan'); HG.render();
+    toast('Importado. Ya vive en Hungry'); HG.render();
   };
   function formAlacena(x) {
     const cats = categorias();
@@ -257,8 +265,6 @@
       h += '</div>';
     });
     h += `<div class="row" style="margin-top:10px"><button class="pri" data-a="fmanual">＋ Agregar a la lista</button></div>`;
-    const sem = HDB.hijos('comida/compras').filter(c => c && c.id);
-    if (sem.length) h += `<h2>Lista semanal de tu plan</h2><div class="nota">Es la lista que armaste para el súper del domingo.</div><div class="card">${sem.sort((a, b) => (a.orden || 0) - (b.orden || 0)).map(c => `<div class="it"><div class="sp"><b>${esc(c.articulo)}</b><div class="nota">${esc(c.cantidad_semana || '')}${c.regla ? ' · ' + esc(c.regla) : ''}</div></div></div>`).join('')}<div style="margin-top:8px"><button class="sm" data-a="semfalt">Pasar toda la lista a por comprar</button></div></div>`;
     return h;
   };
   HG.acc.cmodo = b => { HG.sub.cmodo = b.dataset.v; HG.render(); };
@@ -266,7 +272,6 @@
   HG.acc.fdel = b => { HDB.del('comida/faltantes/' + b.dataset.id); HG.render(); };
   HG.acc.fmanual = () => abrir(`<h2>Agregar a la lista</h2><label>¿Qué falta?</label><input id="fm-n" placeholder="Ej. Café"><label>Pasillo</label><select id="fm-p">${PASILLOS.map(p => `<option>${p}</option>`).join('')}</select><label>¿Dónde lo consigo? (opcional)</label><input id="fm-d"><div class="row" style="margin-top:12px"><button class="pri sp" data-a="fmok">Agregar</button><button data-a="cerrar">Cancelar</button></div>`);
   HG.acc.fmok = () => { const n = ($('#fm-n').value || '').trim(); if (!n) return; const id = 'm-' + slug(n); HDB.set('comida/faltantes/' + id, { id, articulo: n, emoji: '•', estado: 'falta', pasillo: $('#fm-p').value, categoria: '', donde: $('#fm-d').value.trim(), cantidad_texto: 'comprar', ts: Date.now() }); cerrar(); HG.render(); };
-  HG.acc.semfalt = () => { HDB.hijos('comida/compras').filter(c => c && c.id).forEach(c => HDB.set('comida/faltantes/s-' + c.id, { id: 's-' + c.id, articulo: c.articulo, emoji: '🛒', estado: 'falta', pasillo: 'Otros', categoria: '', donde: '', cantidad_texto: c.cantidad_semana || 'comprar', ts: Date.now() })); toast('Lista semanal lista para el súper'); HG.render(); };
 
   // ---------- Registro ----------
   const momentosOpts = sel => planHoy().map(p => `<option value="${esc(p.id)}" ${sel === p.id ? 'selected' : ''}>${esc(p.comida)}</option>`).join('') + `<option value="extra" ${sel === 'extra' ? 'selected' : ''}>Otra comida / colación</option>`;

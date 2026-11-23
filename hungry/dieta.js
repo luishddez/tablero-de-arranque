@@ -56,7 +56,7 @@
     <div id="d-res" class="card" style="margin-top:12px"></div><div class="row"><button class="pri sp" data-a="dguardar">Guardar</button></div>`;
   };
   function leeDatos() { return { ...getP(), sexo: $('#d-sexo').value, edad: +$('#d-edad').value, estatura: +$('#d-est').value, peso: +$('#d-peso').value, actividad: $('#d-act').value, dias_gym: +$('#d-dias').value, hora_gym: $('#d-hg').value || '19:00', objetivo: $('#d-obj').value, ritmo: $('#d-rit').value }; }
-  HG.acc.dguardar = () => { const p = leeDatos(), m = metas(p); if (!m) { toast('Faltan edad, estatura y peso'); return; } p.meta_kcal = m.kcal; p.meta_prot = m.prot; guardaP(p); toast('Guardado'); go(null); };
+  HG.acc.dguardar = () => { const p = leeDatos(), m = metas(p); if (!m) { toast('Faltan edad, estatura y peso'); return; } p.meta_kcal = m.kcal; p.meta_prot = m.prot; guardaP(p); toast('Guardado'); go('salud'); };
   document.addEventListener('input', e => { if (e.target.id && e.target.id.startsWith('d-') && $('#d-res')) { const m = metas(leeDatos()); $('#d-res').innerHTML = m ? `<b>${m.kcal} kcal al día</b><div class="macros"><span>Proteína <b>${m.prot}</b> g</span><span>Carbs <b>${m.carb}</b> g</span><span>Grasa <b>${m.grasa}</b> g</span></div><div class="nota">Gasto en reposo ${m.bmr} kcal · mantenimiento ${m.tdee} kcal. Es una estimación: ajústala con tu peso real cada semana.</div>` : '<span class="mut">Llena edad, estatura y peso para calcular.</span>'; } });
   const refrescaRes = () => { const e = $('#d-peso'); if (e) e.dispatchEvent(new Event('input', { bubbles: true })); };
 
@@ -73,7 +73,7 @@
     <label>Presupuesto de comida</label><select id="s-pre">${o('bajo', 'Ajustado', p.presupuesto)}${o('medio', 'Medio', p.presupuesto)}${o('alto', 'Sin problema', p.presupuesto)}</select>
     <div class="row" style="margin-top:12px"><button class="pri sp" data-a="sguardar">Guardar</button></div>`;
   };
-  HG.acc.sguardar = () => { const p = getP(); p.alergias = [...document.querySelectorAll('.d-al:checked')].map(x => x.value); p.condiciones = $('#s-con').value.trim(); p.medicamentos = $('#s-med').value.trim(); p.comidas = +$('#s-n').value; p.despertar = $('#s-des').value || '08:30'; p.cocina = $('#s-coc').value; p.presupuesto = $('#s-pre').value; p.completo_salud = true; guardaP(p); toast('Guardado'); go(null); };
+  HG.acc.sguardar = () => { const p = getP(); p.alergias = [...document.querySelectorAll('.d-al:checked')].map(x => x.value); p.condiciones = $('#s-con').value.trim(); p.medicamentos = $('#s-med').value.trim(); p.comidas = +$('#s-n').value; p.despertar = $('#s-des').value || '08:30'; p.cocina = $('#s-coc').value; p.presupuesto = $('#s-pre').value; p.completo_salud = true; guardaP(p); toast('Guardado'); go('gustos'); };
 
   // ---- 3 gustos estilo Tinder ----
   let tdx = 0, drag = null, pila = null;
@@ -88,6 +88,7 @@
     }
     const nos = A.filter(x => g[x.id] === 'no');
     if (nos.length) h += `<h3>Descartados (${nos.length})</h3><div class="card">${nos.map(x => `<span class="chip b" data-a="rescata" data-id="${x.id}">${x.e} ${esc(x.n.split(' (')[0])} ↺</span>`).join('')}</div>`;
+    h += `<div class="row" style="margin-top:14px"><button class="pri sp" data-a="dsec" data-s="suples">Listo, seguir: suplementos ›</button></div>`;
     setTimeout(montaTinder, 0);
     return h;
   };
@@ -111,7 +112,7 @@
   // ---- 4 suplementos ----
   HG.dsecs.suples = function () {
     const L = Object.fromEntries(HDB.hijos('comida/suplementos').filter(x => x && x.id).map(x => [x.id, x]));
-    return `${volver}<h1>Suplementos</h1><div class="nota">Anota lo que ya tomas, con la dosis y el horario que te indicó tu médico o nutriólogo. <b>Hungry todavía no sugiere dosis</b>: primero hay que verificar las fuentes, y las dosis dependen de cada persona y de sus medicamentos.</div>${SUPLES.map(([id, n, e]) => { const x = L[id] || {}; return `<div class="card"><label class="row" style="color:var(--tx);font-size:16px;margin:0"><input type="checkbox" data-a="supt" data-id="${id}" ${x.toma ? 'checked' : ''}> ${e} <b>${n}</b></label>${x.toma ? `<div class="row" style="margin-top:6px"><input class="sp" placeholder="Dosis (la que te indicaron)" value="${esc(x.dosis || '')}" data-sup="dosis" data-id="${id}"><input class="sp" placeholder="Horario" value="${esc(x.horario || '')}" data-sup="horario" data-id="${id}"></div>` : ''}${id === 'creatina' ? '<div class="nota" style="margin-top:4px">Es de los suplementos más estudiados para entrenamiento de fuerza.</div>' : ''}</div>`; }).join('')}`;
+    return `${volver}<h1>Suplementos</h1><div class="nota">Anota lo que ya tomas, con la dosis y el horario que te indicó tu médico o nutriólogo. <b>Hungry todavía no sugiere dosis</b>: primero hay que verificar las fuentes, y las dosis dependen de cada persona y de sus medicamentos.</div>${SUPLES.map(([id, n, e]) => { const x = L[id] || {}; return `<div class="card"><label class="row" style="color:var(--tx);font-size:16px;margin:0"><input type="checkbox" data-a="supt" data-id="${id}" ${x.toma ? 'checked' : ''}> ${e} <b>${n}</b></label>${x.toma ? `<div class="row" style="margin-top:6px"><input class="sp" placeholder="Dosis (la que te indicaron)" value="${esc(x.dosis || '')}" data-sup="dosis" data-id="${id}"><input class="sp" placeholder="Horario" value="${esc(x.horario || '')}" data-sup="horario" data-id="${id}"></div>` : ''}${id === 'creatina' ? '<div class="nota" style="margin-top:4px">Es de los suplementos más estudiados para entrenamiento de fuerza.</div>' : ''}</div>`; }).join('')}<div class="row" style="margin-top:14px"><button class="pri sp" data-a="dsec" data-s="regimen">Seguir: armar mi régimen ›</button></div>`;
   };
   HG.acc.supt = b => { const id = b.dataset.id, n = SUPLES.find(s => s[0] === id)[1], x = HDB.get('comida/suplementos/' + id) || { id, nombre: n }; HDB.set('comida/suplementos/' + id, { ...x, toma: b.checked }); HG.render(); };
   document.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.sup) { const id = t.dataset.id, x = HDB.get('comida/suplementos/' + id) || { id }; HDB.set('comida/suplementos/' + id, { ...x, [t.dataset.sup]: t.value }); toast('Guardado'); } });
@@ -136,17 +137,18 @@
       const kObj = r0(m.kcal * pct), cand = HG.sugerencias(tipo, kObj).filter(s => !usados.has(s.p.id)), nOp = id === 'comida' ? 3 : id === 'previa' || id.startsWith('colacion') ? 1 : 2, sel = cand.slice(0, nOp);
       sel.forEach(s => usados.add(s.p.id));
       const es = sel.map(s => ({ s, e: escala(s.p, kObj) })), pr = es.length ? r0(es.reduce((q, x) => q + x.e.pr, 0) / es.length) : 0;
-      out.push({ id, orden: i + 1, comida: NOM[id], hora: fh(H[id]), dias: id === 'previa' ? 'gym' : 'todos', kcal: kObj, proteina_g: pr, minutos: id === 'comida' ? 40 : 10, que_lleva: es.map((x, j) => (es.length > 1 ? ['A', 'B', 'C'][j] + '. ' : '') + txt(x.s.p, x.e)).join(' · ') || 'Sin opciones que cuadren con tus gustos: marca más alimentos con ✓.', minimo: es[0] ? es[0].s.p.n + ' (versión chica, a mano)' : '', origen: 'hungry', id_str: id });
+      out.push({ id, orden: i + 1, comida: NOM[id], hora: fh(H[id]), dias: id === 'previa' ? 'gym' : 'todos', kcal: kObj, proteina_g: pr, minutos: id === 'comida' ? 40 : 10, que_lleva: es.map((x, j) => (es.length > 1 ? ['A', 'B', 'C'][j] + '. ' : '') + txt(x.s.p, x.e)).join(' · ') || 'Sin opciones que cuadren con tus gustos: marca más alimentos con ✓.', minimo: es[0] ? es[0].s.p.n + ' (versión chica, a mano)' : '', origen: 'hungry', opciones: es.map(x => ({ id: x.s.p.id, n: x.s.p.n, i: x.e.it })), id_str: id });
     });
     return out;
   }
   HG.dsecs.regimen = function () {
     const p = getP(), m = metas(p), prop = HDB.hijos('comida/plan_propuesto').filter(x => x && x.id).sort((a, b) => a.orden - b.orden);
     let h = `${volver}<h1>Mi régimen</h1>`;
+    if (HG.plan().length) h += `<div class="card" style="background:var(--ac2)"><b>✅ Régimen activo · ${HG.plan().length} comidas</b><div class="nota">Mi día ya lo muestra. Si quieres, creo tu alacena con los ingredientes y tú marcas lo que sí tienes.</div><div class="row" style="margin-top:8px"><button class="sm" data-a="alregimen">Crear mi alacena desde el régimen</button></div></div>`;
     if (!m) return h + `<div class="card">Primero llena <b>Datos y objetivo</b> para calcular tu meta.</div>`;
     h += `<div class="card" style="background:var(--ac2)"><b>${m.kcal} kcal · ${m.prot} g de proteína</b><div class="nota">Armado con tu objetivo, tus alergias y tus gustos (✓ sí / ✕ no). Prefiere lo que ya tienes en la alacena.</div></div><div class="row"><button class="pri" data-a="armar">${prop.length ? 'Volver a armarlo' : 'Armar mi régimen'}</button></div>`;
     prop.forEach(x => { h += `<div class="card"><div class="row"><b class="sp">${esc(x.comida)}</b><span class="mut">${esc(x.hora)} · ${x.kcal} kcal${x.dias === 'gym' ? ' · días de gym' : ''}</span></div><div class="nota" style="margin-top:4px">${esc(x.que_lleva)}</div></div>`; });
-    if (prop.length) h += `<div class="card" style="border-color:var(--warn)"><b>¿Usar este régimen?</b><div class="nota">Reemplaza tu plan actual en Hungry y en Mi día. Guardo antes una copia del plan que tienes hoy, por si quieres regresar.</div><div class="row" style="margin-top:8px"><button class="pri" data-a="usarreg">Usar este régimen</button>${HDB.hijos('comida/plan_respaldo').length ? '<button data-a="volverreg">Regresar al anterior</button>' : ''}</div></div>`;
+    if (prop.length) h += `<div class="card" style="border-color:var(--warn)"><b>¿Usar este régimen?</b><div class="nota">Será tu régimen activo y Mi día lo mostrará. Si ya tenías uno, guardo antes una copia por si quieres regresar.</div><div class="row" style="margin-top:8px"><button class="pri" data-a="usarreg">Usar este régimen</button>${HDB.hijos('comida/regimen_respaldo').length ? '<button data-a="volverreg">Regresar al anterior</button>' : ''}</div></div>`;
     return h;
   };
   HG.acc.armar = () => {
@@ -155,18 +157,18 @@
     l.forEach(x => { delete x.id_str; HDB.set('comida/plan_propuesto/' + x.id, x); }); HG.render();
   };
   HG.acc.usarreg = () => {
-    if (!confirm('Esto reemplaza tu plan actual (guardo una copia). ¿Continuar?')) return;
-    const act = HDB.hijos('comida/plan').filter(x => x && x.id), nuevo = HDB.hijos('comida/plan_propuesto').filter(x => x && x.id);
-    HDB.hijos('comida/plan_respaldo').forEach(x => x && x.id && HDB.del('comida/plan_respaldo/' + x.id));
-    act.forEach(x => HDB.set('comida/plan_respaldo/' + x.id, x));
-    act.forEach(x => HDB.del('comida/plan/' + x.id));
-    nuevo.forEach(x => HDB.set('comida/plan/' + x.id, { ...x, origen: 'Hungry ' + hoyK() }));
+    if (HDB.hijos('comida/regimen').length && !confirm('Esto reemplaza tu régimen actual (guardo una copia). ¿Continuar?')) return;
+    const act = HDB.hijos('comida/regimen').filter(x => x && x.id), nuevo = HDB.hijos('comida/plan_propuesto').filter(x => x && x.id);
+    HDB.hijos('comida/regimen_respaldo').forEach(x => x && x.id && HDB.del('comida/regimen_respaldo/' + x.id));
+    act.forEach(x => HDB.set('comida/regimen_respaldo/' + x.id, x));
+    act.forEach(x => HDB.del('comida/regimen/' + x.id));
+    nuevo.forEach(x => HDB.set('comida/regimen/' + x.id, { ...x, origen: 'Hungry ' + hoyK() }));
     toast('Régimen activo. Mi día lo verá en menos de 1 minuto.'); HG.render();
   };
   HG.acc.volverreg = () => {
     if (!confirm('¿Regresar al plan anterior?')) return;
-    HDB.hijos('comida/plan').forEach(x => x && x.id && HDB.del('comida/plan/' + x.id));
-    HDB.hijos('comida/plan_respaldo').forEach(x => x && x.id && HDB.set('comida/plan/' + x.id, x)); toast('Plan anterior restaurado'); HG.render();
+    HDB.hijos('comida/regimen').forEach(x => x && x.id && HDB.del('comida/regimen/' + x.id));
+    HDB.hijos('comida/regimen_respaldo').forEach(x => x && x.id && HDB.set('comida/regimen/' + x.id, x)); toast('Plan anterior restaurado'); HG.render();
   };
   HG.iniciar();
   setTimeout(refrescaRes, 0);

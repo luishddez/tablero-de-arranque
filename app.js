@@ -459,7 +459,7 @@ function vistaMenu() {
   h += `<div class="card"><div class="row"><button class="pri" data-a="actualizar">Actualizar</button><button data-a="tema">Fondo: ${tema === 'claro' ? 'claro' : 'oscuro'} (cambiar)</button><button data-a="sonido">Alerta de comida: ${sonidoComida ? 'con sonido' : 'sin sonido'}</button></div><div class="nota" style="margin-top:8px">${esc(estadoSync) || 'Se actualiza solo al abrir y al volver el internet.'}</div></div>`;
   h += `<div class="card"><a class="btn pri" href="hungry/" style="display:inline-block;text-decoration:none">🥗 Abrir Hungry</a><div class="nota" style="margin-top:6px">Tu alimentación: régimen, alacena, compras y registro. Se sincroniza con este tablero.</div></div>`;
   h += `<h3>Notas por acomodar (${est.inbox.length})</h3><div class="card">${est.inbox.map(n => `<div class="it2">${n.enviada ? '✓' : '⏳'} ${esc(n.t)} <span class="nota">${n.enviada ? '· enviada' : '· en cola'}</span></div>`).join('') || '<div class="nota">Nada pendiente.</div>'}${est.inbox.length ? '<div class="row" style="margin-top:8px"><button data-a="reenviar">Enviar ahora</button><button data-a="limpiaInbox">Limpiar lista</button></div><div class="nota" style="margin-top:6px">Las notas se mandan solas. Claude las organiza cuando abres una conversación con él.</div>' : ''}</div>`;
-  if ((datos.plan || []).length) h += `<h3>Plan de alimentación</h3><div class="card">${datos.plan.map(p => `<div class="it2"><b>${esc(fmt(toMin(p.hora || '00:00')))} · ${esc(p.comida)}</b> <span class="nota">· ${esc(p.kcal)} kcal · ${esc(p.proteina)} g de proteína${p.dias === 'gym' ? ' · días de gym' : ''}</span><div class="nota">${esc(p.que_lleva)}</div></div>`).join('')}</div>`;
+  if ((datos.plan || []).length) h += `<h3>Tu régimen <span class="nota">· de Hungry</span></h3><div class="card">${datos.plan.map(p => `<div class="it2"><b>${esc(fmt(toMin(p.hora || '00:00')))} · ${esc(p.comida)}</b> <span class="nota">· ${esc(p.kcal)} kcal · ${esc(p.proteina)} g de proteína${p.dias === 'gym' ? ' · días de gym' : ''}</span><div class="nota">${esc(p.que_lleva)}</div></div>`).join('')}</div>`;
   if ((datos.compras || []).length) h += `<h3>Compras de la semana</h3><div class="card">${listaCompras()}</div>`;
   h += `<h3>Pendientes</h3>`;
   if ((datos.objetivos_semana || []).length) h += `<div class="card"><b>Objetivos de la semana</b>${datos.objetivos_semana.map(o => `<div class="it2">${esc(o)}</div>`).join('')}</div>`;
@@ -857,7 +857,9 @@ async function desdeSheet() {
 // Si el calendario de la cuenta está vacío o lleva más de 3 horas sin latido, se intenta el Sheet publicado; si tampoco hay, se usa lo último guardado.
 async function desdeSupabase() {
   const g = window.TABLERO.gids;
-  const [tarD, planD, comD, diaD, falD, regD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/plan'), SB.coleccion('comida/compras'), SB.coleccion('dia').catch(() => []), SB.coleccion('comida/faltantes').catch(() => []), SB.coleccion('comida/registro').catch(() => [])]);
+  // La comida vive en Hungry: Mi día solo la muestra. Si Hungry aún no tiene régimen, se usa el plan anterior mientras tanto.
+  const [tarD, planH, diaD, falD, regD] = await Promise.all([SB.coleccion('tareas'), SB.coleccion('comida/regimen').catch(() => []), SB.coleccion('dia').catch(() => []), SB.coleccion('comida/faltantes').catch(() => []), SB.coleccion('comida/registro').catch(() => [])]);
+  const planD = planH.length ? planH : await SB.coleccion('comida/plan').catch(() => []), comD = [];
   const ord = (a, b) => (a.orden || 0) - (b.orden || 0);
   const tar = tarD.sort(ord).map(t => ({ ...t, minutos: String(t.minutos ?? ''), prioridad: String(t.prioridad ?? ''), esencial: t.esencial ? 'sí' : 'no' }));
   const plan = planD.sort(ord).map(p => ({ ...p, kcal: String(p.kcal ?? ''), proteina_g: String(p.proteina_g ?? ''), minutos: String(p.minutos ?? '') }));
