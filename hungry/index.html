@@ -51,6 +51,68 @@ label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
 .seg{display:flex;gap:6px;margin:6px 0}.seg button{flex:1}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 @media(prefers-color-scheme:dark){.seg button.on{color:#10200f}}
 .hide{display:none!important}
+/* --- UX/UI v2: jerarquía, ritmo y zonas táctiles --- */
+:root{--sh:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05)}
+@media(prefers-color-scheme:dark){:root{--sh:0 1px 2px rgba(0,0,0,.4)}}
+h1{font-size:26px;letter-spacing:-.3px;margin:2px 0 0}
+h2{font-size:18px;margin:22px 0 8px;letter-spacing:-.2px}
+.card{box-shadow:var(--sh);border-radius:16px;padding:14px}
+button,.btn,select,input{min-height:44px}
+button.sm{min-height:38px}
+button:active{transform:scale(.97)}
+button,.btn{transition:transform .1s,background .15s}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+input[type=checkbox],input[type=radio]{min-height:0;width:22px;height:22px;accent-color:var(--ac)}
+.estado{font-size:11px;padding:3px 8px;white-space:nowrap}
+.tabs{box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.tabs button{position:relative;min-height:56px;font-size:11px;font-weight:500}
+.tabs button b{font-size:22px;transition:transform .15s}
+.tabs button.on b{transform:translateY(-2px) scale(1.1)}
+.tabs button.on::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 4px 4px;background:var(--ac)}
+/* Hoy: anillo + macros */
+.hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,var(--ac2),var(--card));border:1px solid var(--br);border-radius:20px;padding:16px;margin:12px 0 8px;box-shadow:var(--sh)}
+.ring{--p:0;flex:none;width:112px;height:112px;border-radius:50%;background:conic-gradient(var(--ac) calc(var(--p)*1%),var(--br) 0);display:grid;place-items:center;position:relative}
+.ring::before{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--card)}
+.ring.over{background:conic-gradient(var(--warn) calc(var(--p)*1%),var(--br) 0)}
+.ring>div{position:relative;text-align:center;line-height:1.1}.ring b{display:block;font-size:26px;letter-spacing:-.5px}.ring span{font-size:11px;color:var(--mut)}
+.hs{flex:1;min-width:0}.hl{font-size:15px;margin-bottom:8px}.hl b{font-size:17px}
+.mb{margin:6px 0;font-size:12px}.mb .bar{height:6px;margin-top:3px}.bar.sec i{background:var(--mut);opacity:.7}
+.sw{display:flex;align-items:center;gap:10px;margin:6px 2px 10px;color:var(--tx);font-size:15px}
+.sw input{position:absolute;opacity:0;width:44px;height:26px;min-height:0}.sw .knob{flex:none;position:relative;width:44px;height:26px;border-radius:99px;background:var(--br);transition:.2s}
+.sw .knob::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+.knob{background:var(--ac)}.sw input:checked+.knob::after{left:21px}
+.sw input:focus-visible+.knob{outline:3px solid var(--ac);outline-offset:2px}
+.aviso{display:flex;gap:10px;align-items:flex-start;background:var(--warn2);color:var(--tx);border-radius:14px;padding:12px;margin:8px 0;font-size:14px}
+.aviso.ok{background:var(--ac2)}.aviso .ai{font-size:20px;line-height:1.2}
+.next{background:var(--card);border:2px solid var(--ac);border-radius:20px;padding:16px;margin:12px 0;box-shadow:var(--sh)}
+.next h2{margin:6px 0 4px;font-size:22px}.next p{margin:0 0 12px;color:var(--mut);font-size:14px}
+.tag{display:inline-block;background:var(--ac);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+@media(prefers-color-scheme:dark){.tag{color:#10200f}}
+.acts2{display:flex;gap:8px;flex-wrap:wrap}.acts2 .pri{flex:1 1 100%;min-height:50px;font-size:17px;font-weight:600}.acts2 button:not(.pri){flex:1}
+.lista{padding:2px 14px}
+.dl summary{display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer;list-style:none;min-height:48px}
+.dl summary::-webkit-details-marker{display:none}.dl+.dl{border-top:1px solid var(--br)}
+.dot{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--br);display:grid;place-items:center;font-size:14px;color:#fff}
+.dl.hecho .dot{background:var(--ok);border-color:var(--ok)}.dl.hecho b{color:var(--mut);text-decoration:line-through;text-decoration-color:var(--br)}
+.dd{padding:0 0 12px 34px}
+.vacio{text-align:center;padding:28px 16px;background:var(--card);border:1px dashed var(--br);border-radius:20px;margin:14px 0}
+.vacio .big{font-size:56px}.vacio p{color:var(--mut);margin:4px 0 14px}
+.sug{border-left:4px solid var(--ac)}
+/* Registro: acciones grandes */
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.acts button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:84px;border-radius:16px;font-weight:600;box-shadow:var(--sh)}
+.acts button b{font-size:28px;line-height:1}.acts button:first-child{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media(prefers-color-scheme:dark){.acts button:first-child{color:#10200f}}
+/* Dieta: pasos */
+.paso{display:flex;align-items:center;gap:14px;cursor:pointer}
+.pn{flex:none;width:36px;height:36px;border-radius:50%;background:var(--ac2);color:var(--ac);font-weight:800;display:grid;place-items:center}
+.paso.ok .pn{background:var(--ok);color:#fff}
+@media(prefers-color-scheme:dark){.paso.ok .pn{color:#10200f}}
+/* listas */
+.it[data-a]{cursor:pointer}.it{min-height:52px}
+.seg button{min-height:42px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media(max-width:360px){.hero{flex-direction:column;text-align:center}}
 </style>
 </head>
 <body>

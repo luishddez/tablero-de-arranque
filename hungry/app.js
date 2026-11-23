@@ -120,31 +120,39 @@
   // ---------- vistas ----------
   function pill() {
     const e = HDB.estado(), n = HDB.pendientes();
-    const m = { listo: ['', 'Sincronizado'], pendiente: ['w', n + ' por sincronizar'], enviando: ['w', 'Enviando…'], sininternet: ['w', 'Sin internet · se guarda en el teléfono'], error: ['b', 'Sin conexión con tu cuenta'], sinsesion: ['b', 'Falta entrar'] }[e] || ['', ''];
+    const m = { listo: ['', 'Sincronizado'], pendiente: ['w', n + ' sin enviar'], enviando: ['w', 'Enviando…'], sininternet: ['w', 'Sin internet'], error: ['b', 'Sin conexión'], sinsesion: ['b', 'Falta entrar'] }[e] || ['', ''];
     return `<span class="estado ${m[0]}">${m[1]}</span>`;
   }
   HG.pill = pill;
   HG.vistas.hoy = function () {
     const P = planHoy(), R = regHoy(), S = suma(R), meta = metaKcal(), mp = metaProt(), aj = ajuste(), sig = proxima();
-    const pct = meta ? Math.min(100, S.k / meta * 100) : 0, fal = faltantes().filter(f => f.estado === 'falta');
-    let h = `<div class="row"><h1 class="sp">Hoy</h1>${pill()}</div><div class="mut">${new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</div>`;
-    if (!plan().length) h += `<div class="card">Aún no tienes régimen. Ve a <b>Dieta</b> para armarlo (o carga el que ya tienes en Mi día).</div>`;
-    h += `<div class="card"><div class="row"><b class="sp">${r0(S.k)} <span class="mut">/ ${r0(meta)} kcal</span></b><label class="row" style="margin:0;color:var(--tx)"><input type="checkbox" data-i="gym" ${dia().gym ? 'checked' : ''}> Hoy entreno</label></div><div class="bar ${S.k > meta * 1.05 ? 'over' : ''}" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="macros"><span>Proteína <b>${r0(S.pr)}</b>${mp ? '/' + r0(mp) : ''} g</span><span>Carbs <b>${r0(S.c)}</b> g</span><span>Grasa <b>${r0(S.gr)}</b> g</span></div></div>`;
-    if (aj) h += `<div class="card" style="background:${aj.ok ? 'var(--ac2)' : 'var(--warn2)'}">${esc(aj.t)}</div>`;
-    h += '<h2>Tu régimen de hoy</h2>';
-    P.forEach(p => {
-      const reg = R.filter(r => r.momento === p.id), hecho = reg.length, kr = suma(reg).k;
-      h += `<div class="card"><div class="row"><b class="sp">${hecho ? '✅ ' : ''}${esc(p.comida)}</b><span class="mut">${esc(p.hora || '')} · ${esc(p.kcal)} kcal${p.dias === 'gym' ? ' · gym' : ''}</span></div><div class="nota" style="margin:4px 0 8px">${esc(p.que_lleva)}</div>`;
-      if (hecho) h += `<div class="row"><span class="chip">${r0(kr)} kcal registradas${reg.some(r => r.aprox) ? ' · aprox.' : ''}</span><span class="sp"></span><button class="sm ghost" data-a="deshacer" data-id="${esc(p.id)}">Deshacer</button></div>`;
-      else h += `<div class="row"><button class="pri sm" data-a="comi" data-id="${esc(p.id)}">✓ Ya comí esto</button><button class="sm" data-a="foto" data-m="${esc(p.id)}">📷 Foto</button><button class="sm" data-a="otro" data-m="${esc(p.id)}">Comí otra cosa</button></div>`;
-      h += '</div>';
-    });
-    h += `<h2>🛒 Por comprar <span class="mut" style="font-weight:400">· ${fal.length}</span></h2>`;
-    h += fal.length ? `<div class="card">${fal.slice(0, 6).map(f => `<div>${esc(f.emoji || '•')} ${esc(f.articulo)} <span class="mut">· ${esc(f.cantidad_texto || '')}</span></div>`).join('')}${fal.length > 6 ? `<div class="mut">y ${fal.length - 6} más…</div>` : ''}<div style="margin-top:8px"><button class="sm" data-a="tab" data-t="compras">Ver lista</button></div></div>` : `<div class="card mut">Nada urgente. Tu alacena está al día.</div>`;
+    const M = HG.metas ? HG.metas(perfil()) : null, pct = meta ? Math.min(100, S.k / meta * 100) : 0, fal = faltantes().filter(f => f.estado === 'falta');
+    const sobra = r0(meta - S.k), over = meta && S.k > meta * 1.05, hr = new Date().getHours(), saludo = hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches';
+    const mb = (n, v, t, cls) => `<div class="mb"><div class="row"><span class="sp">${n}</span><b>${r0(v)}</b><span class="mut">${t ? ' / ' + r0(t) : ''} g</span></div><div class="bar ${cls || ''}"><i style="width:${t ? Math.min(100, v / t * 100) : 0}%"></i></div></div>`;
+    let h = `<div class="row"><div class="sp"><div class="mut">${new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, c => c.toUpperCase())}</div><h1>${saludo}</h1></div>${pill()}</div>`;
+    if (!plan().length) h += `<div class="vacio"><div class="big">🥗</div><b>Aún no tienes régimen</b><p>Arma uno en <b>Dieta</b> en unos minutos, o carga el que ya usas en Mi día.</p><button class="pri" data-a="tab" data-t="dieta">Armar mi dieta</button></div>`;
+    else {
+      h += `<div class="hero"><div class="ring ${over ? 'over' : ''}" style="--p:${pct}"><div><b>${r0(S.k)}</b><span>de ${r0(meta)} kcal</span></div></div><div class="hs"><div class="hl">${over ? `Te pasaste <b>${-sobra} kcal</b>` : sobra > 0 ? `Te quedan <b>${sobra} kcal</b>` : '¡Meta cumplida!'}</div>${mb('Proteína', S.pr, mp)}${mb('Carbs', S.c, M && M.carb, 'sec')}${mb('Grasa', S.gr, M && M.grasa, 'sec')}</div></div>`;
+      h += `<label class="sw"><input type="checkbox" data-i="gym" ${dia().gym ? 'checked' : ''}><span class="knob"></span> Hoy entreno <span class="mut">(suma tu licuado previo)</span></label>`;
+      if (aj) h += `<div class="aviso ${aj.ok ? 'ok' : ''}"><span class="ai">${aj.ok ? '👌' : '💡'}</span><span>${esc(aj.t)}</span></div>`;
+      if (sig) h += `<div class="next"><div class="row"><span class="tag">Sigue · ${esc(sig.hora || '')}</span><span class="sp"></span><span class="mut">${esc(sig.kcal)} kcal${sig.proteina_g ? ' · ' + esc(sig.proteina_g) + ' g prot' : ''}</span></div><h2>${esc(sig.comida)}</h2><p>${esc(sig.que_lleva)}</p><div class="acts2"><button class="pri" data-a="comi" data-id="${esc(sig.id)}">✓ Ya comí esto</button><button data-a="foto" data-m="${esc(sig.id)}">📷 Foto</button><button data-a="otro" data-m="${esc(sig.id)}">Otra cosa</button></div></div>`;
+      else h += `<div class="aviso ok"><span class="ai">🎉</span><span>Completaste todas las comidas de hoy.</span></div>`;
+      const resto = P.filter(p => !sig || p.id !== sig.id);
+      if (resto.length) {
+        h += `<h2>El resto de tu día</h2><div class="card lista">`;
+        resto.forEach(p => {
+          const reg = R.filter(r => r.momento === p.id), hecho = reg.length, kr = suma(reg).k;
+          h += `<details class="dl ${hecho ? 'hecho' : ''}"><summary><span class="dot">${hecho ? '✓' : ''}</span><span class="sp"><b>${esc(p.comida)}</b><span class="mut"> · ${esc(p.hora || '')}${p.dias === 'gym' ? ' · gym' : ''}</span></span><span class="mut">${hecho ? r0(kr) + ' kcal' + (reg.some(r => r.aprox) ? ' ~' : '') : esc(p.kcal) + ' kcal'}</span></summary><div class="dd"><div class="nota">${esc(p.que_lleva)}</div><div class="row" style="margin-top:8px">${hecho ? `<button class="sm ghost" data-a="deshacer" data-id="${esc(p.id)}">Deshacer</button>` : `<button class="pri sm" data-a="comi" data-id="${esc(p.id)}">✓ Ya comí esto</button><button class="sm" data-a="foto" data-m="${esc(p.id)}">📷</button><button class="sm" data-a="otro" data-m="${esc(p.id)}">Otra cosa</button>`}</div></div></details>`;
+        });
+        h += '</div>';
+      }
+    }
+    h += `<div class="row" style="margin-top:18px"><h2 class="sp" style="margin:0">🛒 Por comprar</h2>${fal.length ? `<span class="chip w">${fal.length}</span>` : ''}</div>`;
+    h += fal.length ? `<div class="card">${fal.slice(0, 5).map(f => `<div class="it" style="padding:7px 0"><span class="em" style="font-size:20px;width:26px">${esc(f.emoji || '•')}</span><span class="sp">${esc(f.articulo)}</span><span class="mut">${esc(f.cantidad_texto || '')}</span></div>`).join('')}${fal.length > 5 ? `<div class="mut" style="padding-top:6px">y ${fal.length - 5} más…</div>` : ''}<button class="sm" style="margin-top:8px" data-a="tab" data-t="compras">Abrir lista completa</button></div>` : `<div class="card mut">Nada urgente: tu alacena está al día ✨</div>`;
     if (sig) {
-      const sg = sugerencias(tipoDe(sig), Number(sig.kcal)).slice(0, 4);
-      h += `<h2>👩‍🍳 ¿Qué cocino para «${esc(sig.comida)}»?</h2><div class="nota">Según lo que hay en tu alacena y lo que no descartaste.</div>`;
-      sg.forEach(s => { h += `<div class="card"><div class="row"><b class="sp">${esc(s.p.n)}</b><span class="mut">${r0(s.m.k)} kcal · ${r0(s.m.pr)} g prot</span></div><div class="nota">${s.p.i.map(([id, g]) => esc(AM[id].n.split(' (')[0]) + ' ' + g + ' g').join(' · ')}</div>${s.falta.length ? `<div class="chip w">Te falta: ${esc(s.falta.join(', '))}</div>` : `<div class="chip">Tienes todo</div>`}<div class="row" style="margin-top:6px"><button class="sm" data-a="cocine" data-p="${esc(s.p.id)}" data-m="${esc(sig.id)}">Lo comí</button>${s.falta.length ? `<button class="sm" data-a="faltaplato" data-p="${esc(s.p.id)}">Agregar lo que falta a compras</button>` : ''}</div></div>`; });
+      const sg = sugerencias(tipoDe(sig), Number(sig.kcal)).slice(0, 3);
+      h += `<h2>👩‍🍳 Ideas para «${esc(sig.comida)}»</h2><div class="nota" style="margin:-4px 0 6px">Con lo que hay en tu alacena y lo que no descartaste.</div>`;
+      sg.forEach(s => { h += `<div class="card sug"><div class="row"><b class="sp">${esc(s.p.n)}</b></div><div class="macros" style="margin:4px 0"><span><b>${r0(s.m.k)}</b> kcal</span><span>P <b>${r0(s.m.pr)}</b></span><span>C <b>${r0(s.m.c)}</b></span><span>G <b>${r0(s.m.gr)}</b></span></div><div class="nota">${s.p.i.map(([id, g]) => esc(AM[id].n.split(' (')[0]) + ' ' + g + ' g').join(' · ')}</div><div style="margin-top:6px">${s.falta.length ? `<span class="chip w">Te falta: ${esc(s.falta.join(', '))}</span>` : `<span class="chip">✓ Tienes todo</span>`}</div><div class="row" style="margin-top:8px"><button class="sm pri" data-a="cocine" data-p="${esc(s.p.id)}" data-m="${esc(sig.id)}">Lo comí</button>${s.falta.length ? `<button class="sm" data-a="faltaplato" data-p="${esc(s.p.id)}">Pasar lo que falta a compras</button>` : ''}</div></div>`; });
     }
     return h;
   };
@@ -169,8 +177,8 @@
 
   // ---------- Alacena ----------
   HG.vistas.alacena = function () {
-    const q = (HG.sub.alq || '').toLowerCase(), L = alacena().filter(x => !q || x.nombre.toLowerCase().includes(q)), cats = categorias();
-    let h = `<div class="row"><h1 class="sp">Alacena</h1>${pill()}</div><div class="row" style="margin:8px 0"><button class="pri" data-a="alta">＋ Agregar</button><button data-a="cats">Categorías</button><input class="sp" style="min-width:120px" placeholder="Buscar…" data-i="alq" value="${esc(HG.sub.alq || '')}"></div>`;
+    const q = (HG.sub.alq || '').toLowerCase(), f = HG.sub.alf || 'todo', todos = alacena(), nb = todos.filter(baja).length, L = todos.filter(x => (!q || x.nombre.toLowerCase().includes(q)) && (f === 'todo' || baja(x))), cats = categorias();
+    let h = `<div class="row"><div class="sp"><h1>Alacena</h1><div class="mut">${todos.length} artículos · <b style="color:${nb ? 'var(--warn)' : 'var(--ok)'}">${nb} por reponer</b></div></div>${pill()}</div><div class="row" style="margin:10px 0"><input class="sp" style="min-width:120px" placeholder="🔎 Buscar…" data-i="alq" value="${esc(HG.sub.alq || '')}"><button class="pri" data-a="alta">＋ Agregar</button></div><div class="seg"><button data-a="alfil" data-v="todo" class="${f === 'todo' ? 'on' : ''}">Todo</button><button data-a="alfil" data-v="bajo" class="${f === 'bajo' ? 'on' : ''}">Por reponer</button><button data-a="cats">Categorías</button></div>`;
     if (!alacena().length) h += `<div class="card">Tu alacena está vacía.<div class="nota" style="margin:6px 0">Puedo cargar los ${HDB.hijos('comida/compras').length} artículos de tu lista semanal para que solo marques lo que ya tienes.</div><button class="pri" data-a="cargarsem">Cargar mis artículos de la semana</button></div>`;
     const grupos = {}; L.forEach(x => { const c = (x.categoria && (cats.find(k => k.id === x.categoria) || {}).nombre) || 'Sin categoría'; (grupos[c] = grupos[c] || []).push(x); });
     Object.keys(grupos).sort().forEach(c => {
@@ -187,6 +195,7 @@
     return h;
   };
   function guardarAlacena(x) { x.ts = Date.now(); HDB.set('comida/alacena/' + x.id, x); sincronizarFaltantes(); HG.render(); }
+  HG.acc.alfil = b => { HG.sub.alf = b.dataset.v; HG.render(); };
   HG.acc.nivel = b => { const x = HDB.get('comida/alacena/' + b.dataset.id); guardarAlacena({ ...x, nivel: { tengo: 'poco', poco: 'no', no: 'tengo' }[x.nivel || 'tengo'] }); };
   HG.acc.mas = b => { const x = HDB.get('comida/alacena/' + b.dataset.id), st = UNIDADES[x.unidad] || 1; guardarAlacena({ ...x, cantidad: Math.max(0, r1((Number(x.cantidad) || 0) + st * Number(b.dataset.d))) }); };
   HG.acc.cargarsem = () => {
@@ -237,7 +246,7 @@
   // ---------- Compras ----------
   HG.vistas.compras = function () {
     const modo = HG.sub.cmodo || 'pasillo', F = faltantes().filter(f => f.estado === 'falta'), cats = categorias();
-    let h = `<div class="row"><h1 class="sp">Compras</h1>${pill()}</div><div class="seg">${[['pasillo', 'Por pasillo'], ['cat', 'Por categoría'], ['tienda', 'Por tienda']].map(([v, t]) => `<button data-a="cmodo" data-v="${v}" class="${modo === v ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+    let h = `<div class="row"><div class="sp"><h1>Compras</h1><div class="mut">${faltantes().filter(f => f.estado === 'falta').length} por comprar</div></div>${pill()}</div><div class="seg">${[['pasillo', 'Por pasillo'], ['cat', 'Por categoría'], ['tienda', 'Por tienda']].map(([v, t]) => `<button data-a="cmodo" data-v="${v}" class="${modo === v ? 'on' : ''}">${t}</button>`).join('')}</div>`;
     const clave = f => modo === 'pasillo' ? (f.pasillo || 'Otros') : modo === 'cat' ? ((cats.find(c => c.id === f.categoria) || {}).nombre || 'Sin categoría') : (f.donde || 'Sin tienda definida');
     const g = {}; F.forEach(f => (g[clave(f)] = g[clave(f)] || []).push(f));
     const orden = modo === 'pasillo' ? PASILLOS : Object.keys(g).sort();
@@ -266,7 +275,7 @@
     const modo = HG.sub.rmodo || 'hoy';
     let h = `<div class="row"><h1 class="sp">Registro</h1>${pill()}</div><div class="seg"><button data-a="rmodo" data-v="hoy" class="${modo === 'hoy' ? 'on' : ''}">Hoy</button><button data-a="rmodo" data-v="semana" class="${modo === 'semana' ? 'on' : ''}">Resumen semanal</button></div>`;
     if (modo === 'semana') return h + resumenSemana();
-    h += `<div class="row" style="margin:8px 0"><button class="pri" data-a="foto" data-m="">📷 Foto</button><button data-a="otro" data-m="">🔎 Buscar alimento</button><button data-a="sicomi">✓ «Sí comí»</button></div>`;
+    h += `<div class="acts"><button data-a="foto" data-m=""><b>📷</b>Foto</button><button data-a="otro" data-m=""><b>🔎</b>Buscar</button><button data-a="sicomi"><b>✓</b>Sí comí</button></div>`;
     const pend = HG.fotosPend || [];
     if (pend.length) h += `<h3>Fotos por confirmar</h3>${pend.map(f => `<div class="card"><div class="row"><img src="${f.mini}" width="56" height="56" style="border-radius:10px;object-fit:cover"><div class="sp"><b>${f.res ? 'Análisis listo' : 'Esperando análisis'}</b><div class="nota">${f.err ? esc(f.err) : f.res ? (f.res.items || []).length + ' alimentos detectados' : 'Se analiza cuando haya internet'}</div></div></div><div class="row" style="margin-top:6px">${f.res ? `<button class="pri sm" data-a="fconf" data-id="${f.id}">Revisar y guardar</button>` : `<button class="sm" data-a="fanal" data-id="${f.id}">Analizar ahora</button>`}<button class="sm bad" data-a="fdesc" data-id="${f.id}">Descartar</button></div></div>`).join('')}`;
     const R = regHoy(); h += `<h3>Lo que llevas hoy</h3>`;

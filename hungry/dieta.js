@@ -27,8 +27,8 @@
   HG.vistas.dieta = function () {
     const s = sec(); if (s && HG.dsecs[s]) return HG.dsecs[s]();
     const p = getP(), m = metas(p), g = gustos(), nsi = Object.values(g).filter(v => v === 'si').length, nno = Object.values(g).filter(v => v === 'no').length;
-    const sup = HDB.hijos('comida/suplementos').filter(x => x && x.toma).length, prop = HDB.hijos('comida/plan_propuesto').length, tarj = (t, d, ok, sx) => `<div class="card" data-a="dsec" data-s="${sx}"><div class="row"><b class="sp">${ok ? '✅ ' : ''}${t}</b><span class="mut">›</span></div><div class="nota">${d}</div></div>`;
-    let h = `<div class="row"><h1 class="sp">Arma tu dieta</h1>${HG.pill()}</div><div class="nota">Cinco pasos. Puedes volver a cualquiera cuando quieras.</div>`;
+    const sup = HDB.hijos('comida/suplementos').filter(x => x && x.toma).length, prop = HDB.hijos('comida/plan_propuesto').length, tarj = (t, d, ok, sx) => `<div class="card paso ${ok ? 'ok' : ''}" data-a="dsec" data-s="${sx}"><span class="pn">${ok ? '✓' : t.charAt(0)}</span><div class="sp"><b>${t.slice(4)}</b><div class="nota">${d}</div></div><span class="mut" style="font-size:20px">›</span></div>`;
+    let h = `<div class="row"><h1 class="sp">Arma tu dieta</h1>${HG.pill()}</div><div class="nota">Cinco pasos. Puedes volver a cualquiera cuando quieras.</div><div class="bar" style="margin:10px 0 4px"><i style="width:${[!!m, !!p.completo_salud, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length * 20}%"></i></div><div class="mut" style="margin-bottom:6px">${[!!m, !!p.completo_salud, nsi + nno > 20, sup > 0, !!prop].filter(Boolean).length} de 5 pasos listos</div>`;
     if (m) h += `<div class="card" style="background:var(--ac2)"><b>Tu meta: ${m.kcal} kcal al día</b><div class="macros"><span>Proteína <b>${m.prot}</b> g</span><span>Carbs <b>${m.carb}</b> g</span><span>Grasa <b>${m.grasa}</b> g</span></div></div>`;
     h += tarj('1 · Datos y objetivo', 'Cuerpo, actividad y qué quieres lograr', !!m, 'datos');
     h += tarj('2 · Salud y hábitos', 'Alergias, medicamentos, horarios y cómo comes', !!p.completo_salud, 'salud');
